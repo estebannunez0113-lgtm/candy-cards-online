@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Candy Cards: The Video Game</title>
+<style>
+:root{--dark-bg:#191428;--panel:#14121d;--panel2:#20202c;--white:#fff;--yellow:#ffe45c;--red:#ff3d3d;--green:#38d76b;--blue:#4d8fff;--purple:#b04bea;--orange:#ff9a32;--gray:#9da0aa;--dark-red:#8d1f2e;--brown:#a15f31;--dark-brown:#4d2a18}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;background:var(--dark-bg);color:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+body{touch-action:manipulation}
+button{font:700 20px Arial,Helvetica,sans-serif;color:#fff;background:#444;border:2px solid #fff;border-radius:12px;padding:10px 18px;cursor:pointer;box-shadow:none}
+button:hover{filter:brightness(1.15)}
+button:active{transform:translateY(1px)}
+button.green{background:var(--green)}
+button.blue{background:var(--blue)}
+button.purple{background:var(--purple)}
+button.orange{background:var(--orange)}
+button.gold{background:#c59a24}
+button.red{background:var(--red)}
+button.gray{background:#45444f}
+button.small{font-size:16px;padding:7px 12px}
+#app{width:100%;height:100%}
+.page{width:100%;height:100%;overflow:auto;background:var(--dark-bg)}
+.canvas-page{width:100%;height:100%;position:relative;background:#191428;overflow:hidden}
+canvas.game{display:block;width:100%;height:100%;touch-action:none}
+.ui{position:absolute;inset:0;pointer-events:none}
+.ui>*{pointer-events:auto}
+.og-device{position:absolute;right:20px;top:18px}
+.og-title{position:absolute;left:50%;top:57px;transform:translateX(-50%);font-size:clamp(40px,6vw,78px);font-weight:900;white-space:nowrap;text-shadow:0 3px 0 #000;text-align:center}
+.og-subtitle{position:absolute;left:50%;top:141px;transform:translateX(-50%);font-size:clamp(20px,3vw,35px);font-weight:900;color:var(--yellow);white-space:nowrap;text-shadow:0 2px 0 #000}
+.og-lollipop{position:absolute;left:50%;top:198px;transform:translateX(-50%);width:130px;height:155px}
+.og-lollipop .stick{position:absolute;left:58px;top:65px;width:14px;height:100px;background:#fff;border-radius:6px}
+.og-lollipop .head{position:absolute;left:5px;top:0;width:120px;height:120px;background:#ff3737;border-radius:50%;box-shadow:inset 18px 15px 0 rgba(255,130,130,.65);border:4px solid #d11f2f}
+.og-lollipop .shine{position:absolute;left:30px;top:25px;width:23px;height:23px;background:#ffbcbc;border-radius:50%;opacity:.9}
+.og-buttons{position:absolute;left:50%;top:350px;transform:translateX(-50%);width:min(300px,72vw);display:flex;flex-direction:column;gap:15px}
+.og-buttons button{height:55px}
+.og-info{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);color:#d4d0dc;font-size:18px;text-align:center;white-space:nowrap}
+.topbar{height:78px;display:flex;align-items:center;gap:10px;padding:12px;background:#14121d;border-bottom:2px solid #4b3b59;position:sticky;top:0;z-index:20}
+.topbar .spacer{flex:1}
+.pill{background:#201c29;border:2px solid #4a4055;border-radius:10px;padding:9px 12px;font-weight:900}
+.section{width:min(1280px,96vw);margin:0 auto;padding:18px 0 40px}
+.section h1{font-size:46px;text-align:center;margin:6px 0 18px;text-shadow:0 3px 0 #000}
+.panel{background:#15121e;border:2px solid #413749;border-radius:14px;padding:15px;margin:12px 0}
+.center{text-align:center}
+.scroll{max-height:calc(100vh - 170px);overflow:auto;padding:0 0 25px}
+.grid6{display:grid;grid-template-columns:repeat(6,165px);gap:15px;justify-content:center}
+.grid5{display:grid;grid-template-columns:repeat(5,200px);gap:20px;justify-content:center}
+.collection-card{width:165px;height:205px;background:#19151f;border:4px solid #777;border-radius:12px;text-align:center;padding:7px;position:relative}
+.collection-card.locked{background:#3b3a42;border-color:#4b4b55;color:#9b9ba7}
+.collection-card canvas{width:145px;height:108px;display:block;margin:0 auto}
+.card-name{height:37px;font-size:18px;font-weight:900;line-height:18px;display:flex;align-items:center;justify-content:center}
+.card-rarity{font-size:21px;font-weight:900;height:26px}
+.card-amount{font-size:18px}
+.pet-card{width:200px;height:205px;background:#15121e;border:4px solid #777;border-radius:12px;text-align:center;padding:7px;position:relative}.pet-use-btn{position:absolute;left:7px;top:86px;padding:6px 8px;font-size:12px;min-width:52px}
+.pet-art{height:105px;display:flex;align-items:center;justify-content:center;font-size:66px}.pet-canvas{width:180px;height:105px;display:block;margin:0 auto}.pack-pet-canvas{width:145px;height:108px;display:block;margin:0 auto}
+.skill-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.skin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.skin-box{background:#15121e;border:3px solid #493d55;border-radius:12px;padding:14px;text-align:center}
+.rank{display:flex;gap:15px;align-items:center;border:3px solid #403747;background:#15121e;padding:12px;border-radius:12px;margin:10px 0}
+.rank-badge{width:65px;height:65px;border-radius:50%;display:grid;place-items:center;background:#36333c;border:4px solid #888;font-size:24px;font-weight:900}
+.rank.current .rank-badge{box-shadow:0 0 18px rgba(255,255,255,.35)}
+.rank-progress{height:17px;background:#2c2733;border-radius:10px;overflow:hidden;margin-top:10px;border:1px solid #000}
+.rank-progress>div{height:100%;background:linear-gradient(90deg,#ff4f98,#ffd54a)}
+.battle-arena{position:relative;min-height:590px;background:#17151f;border:3px solid #43384d;border-radius:15px;overflow:hidden}
+.battle-side{position:absolute;top:30px;width:280px;text-align:center}
+.battle-side.left{left:2%}.battle-side.right{right:2%}
+.battle-card{width:220px;height:300px;margin:10px auto;background:#17131d;border:5px solid #777;border-radius:14px;padding:8px}
+.battle-card canvas{width:190px;height:155px;display:block;margin:6px auto}
+.battle-stats{display:flex;justify-content:space-between;font-weight:900;font-size:16px}
+.hpbox{height:20px;background:#461722;border:2px solid #000;border-radius:9px;overflow:hidden;margin:8px auto;width:220px}
+.hpbox>div{height:100%;background:#35d26a}
+.vs{position:absolute;left:50%;top:225px;transform:translateX(-50%);font-size:52px;font-weight:900;color:#ffd64f;text-shadow:0 4px 0 #5a3c00}
+.battle-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0}
+.log{width:min(800px,94vw);margin:0 auto;background:#0f0d13;border:2px solid #41364a;border-radius:10px;padding:12px;text-align:center;min-height:80px}
+.multi-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.form{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+input{font:700 18px Arial;background:#0f0d13;color:#fff;border:2px solid #4d4255;border-radius:10px;padding:10px}
+.wave-page{position:relative;width:100%;height:100%;background:#191428;overflow:hidden}
+#waveCanvas{width:100%;height:100%;display:block;touch-action:none}
+.waveHUD{position:absolute;left:0;right:0;top:0;height:85px;background:#14141e;border-bottom:2px solid var(--yellow);display:flex;align-items:center;gap:22px;padding:12px 20px;z-index:4;pointer-events:none}
+.waveHP{width:240px;height:24px;background:#7e1c2a;border-radius:7px;overflow:hidden;border:1px solid #000;position:relative}
+.waveHP>div{height:100%;background:#3eda6c}
+.waveHP span{position:absolute;inset:0;display:grid;place-items:center;font-weight:900}
+.waveHUD .txt{font-size:25px;font-weight:900}
+.waveButtons{position:absolute;right:12px;top:12px;display:flex;gap:8px;z-index:5}
+.touch-joystick{position:absolute;left:28px;bottom:28px;width:155px;height:155px;border-radius:50%;background:rgba(220,220,220,.18);border:4px solid rgba(255,255,255,.25);display:grid;place-items:center;z-index:5;touch-action:none}
+.touch-knob{width:65px;height:65px;border-radius:50%;background:rgba(165,165,175,.7);border:3px solid rgba(255,255,255,.55)}
+.attack-touch{position:absolute;right:30px;bottom:36px;width:118px;height:118px;border-radius:50%;background:#e33c43;border:5px solid #ff9599;color:#fff;font-size:18px;font-weight:900;z-index:5}
+.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);z-index:1000;background:#20182b;border:2px solid #ffe45c;border-radius:12px;padding:12px 18px;font-weight:900;display:none}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:grid;place-items:center;padding:15px;z-index:900}
+.modal-box{width:min(820px,95vw);max-height:92vh;overflow:auto;background:#15121e;border:3px solid #584467;border-radius:15px;padding:18px;text-align:center}
+.pack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pack-item{background:#17131d;border:3px solid #55405f;border-radius:12px;padding:8px}
+@media(max-width:1050px){.grid6{grid-template-columns:repeat(4,165px)}.skin-grid{grid-template-columns:repeat(2,1fr)}.multi-grid{grid-template-columns:1fr}}
+@media(max-width:720px){.topbar{height:62px;overflow-x:auto}.pill{font-size:13px;padding:7px 8px}.section h1{font-size:33px}.grid6{grid-template-columns:repeat(2,165px);gap:9px}.grid5{grid-template-columns:repeat(2,200px);gap:9px}.waveHUD{height:62px;gap:8px;padding:7px}.waveHP{width:145px;height:20px}.waveHUD .txt{font-size:17px}.waveButtons{top:70px;right:6px;max-width:70vw;justify-content:flex-end;flex-wrap:wrap}.waveButtons button{font-size:12px;padding:6px 8px}.battle-side{width:175px}.battle-card{width:155px;height:240px}.battle-card canvas{width:130px;height:125px}.hpbox{width:155px}.vs{font-size:38px;top:205px}.battle-arena{min-height:520px}.og-device{right:12px;top:12px;font-size:13px}.og-title{top:70px;font-size:42px}.og-subtitle{top:127px;font-size:20px}.og-lollipop{top:175px;transform:translateX(-50%) scale(.8)}.og-buttons{top:300px}.og-info{font-size:13px;bottom:10px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<script>
+
+// ================================================================
+// CANDY CARDS WEB PORT
+// Based on the supplied main.py. The OG SOLO WAVE mode is kept
+// separate from CARD BATTLE, MULTIPLAYER, and RANK.
+// ================================================================
+
+const WIDTH = 1280;
+const HEIGHT = 720;
+
+const C = {
+    WHITE:"#ffffff", BLACK:"#000000", RED:"#ff4545", DARK_RED:"#8e2020",
+    GREEN:"#43d17a", DARK_GREEN:"#176b39", BROWN:"#9b5e32", DARK_BROWN:"#4b2b18",
+    YELLOW:"#ffe24f", GOLD:"#ffc62e", BLUE:"#4d85ff", LIGHT_BLUE:"#73d7ff",
+    PURPLE:"#a05cff", PINK:"#ff65a6", ORANGE:"#ff8c32", CYAN:"#38e0df",
+    DARK_BG:"#191428", DARK_GRAY:"#3e3b47", GRAY:"#8c8895", LIGHT_GRAY:"#d6d1dc",
+    HEALTH_GREEN:"#43d17a"
+};
+
+const RARITIES = ["Common","Uncommon","Rare","Epic","Legendary","Mythic","Secret","Exotic","OP","OC"];
+const RARITY_CHANCES = {Common:45.0,Uncommon:25.0,Rare:14.0,Epic:7.0,Legendary:4.0,Mythic:2.2,Secret:1.2,Exotic:0.9,OP:0.45,OC:0.15};
+const RARITY_COLORS = {Common:"#b4b4b4",Uncommon:"#46d45e",Rare:"#4686ff",Epic:"#b04bea",Legendary:"#ffbf2e",Mythic:"#ff5151",Secret:"#444452",Exotic:"#29d8c3",OP:"#ff46b2",OC:"#ffffff"};
+
+const CANDY_CARDS = [
+["Red Lollipop","Common"],["Green Broccoli","Common"],["Brown Steak","Common"],
+["Big Lollipop","Uncommon"],["Angry Broccoli","Uncommon"],["Juicy Steak","Uncommon"],
+["Candy Warrior","Rare"],["Mega Broccoli","Rare"],["Golden Steak","Rare"],
+["Super Lollipop","Epic"],["Broccoli Beast","Epic"],["Steak Crusher","Epic"],
+["Candy King","Legendary"],["Broccoli King","Legendary"],["Steak King","Legendary"],
+["Mythic Candy","Mythic"],["Mythic Broccoli","Mythic"],["Mythic Steak","Mythic"],
+["Secret Lollipop","Secret"],["Secret Broccoli","Secret"],["Secret Steak","Secret"],
+["Exotic Candy","Exotic"],["Exotic Broccoli","Exotic"],["Exotic Steak","Exotic"],
+["OP Lollipop","OP"],["OP Broccoli","OP"],["OP Steak","OP"],
+["OC Candy God","OC"],["OC Broccoli God","OC"],["OC Steak God","OC"],
+["Candy Cookie","Common"],["Candy Gumdrop","Common"],["Candy Marshmallow","Common"],
+["Candy Donut","Common"],["Candy Cupcake","Common"],["Candy Ice Cream","Common"],
+["Blue Lollipop","Uncommon"],["Tiny Broccoli","Uncommon"],["Mini Steak","Uncommon"],
+["Giant Cookie","Uncommon"],["Sugar Cube","Uncommon"],["Jelly Bean","Uncommon"],
+["Crystal Lollipop","Rare"],["Turbo Broccoli","Rare"],["Fire Steak","Rare"],
+["Chocolate Knight","Rare"],["Candy Ninja","Rare"],["Ice Cream Warrior","Rare"],
+["Rainbow Lollipop","Epic"],["Thunder Broccoli","Epic"],["Lava Steak","Epic"],
+["Chocolate Dragon","Epic"],["Candy Samurai","Epic"],["Frost Candy","Epic"],
+["Golden Lollipop","Legendary"],["Golden Broccoli","Legendary"],["Golden Steak Lord","Legendary"],
+["Candy Dragon King","Legendary"],["Rainbow Candy King","Legendary"],["Sugar Emperor","Legendary"],
+["Galaxy Lollipop","Mythic"],["Galaxy Broccoli","Mythic"],["Galaxy Steak","Mythic"],
+["Cosmic Candy Dragon","Mythic"],["Mythic Sugar Beast","Mythic"],["Star Candy King","Mythic"],
+["Invisible Lollipop","Secret"],["Shadow Broccoli","Secret"],["Phantom Steak","Secret"],
+["Secret Candy Dragon","Secret"],["Unknown Sugar","Secret"],["Lost Lollipop","Secret"],
+["Diamond Lollipop","Exotic"],["Diamond Broccoli","Exotic"],["Diamond Steak","Exotic"],
+["Cosmic Crystal","Exotic"],["Star Candy","Exotic"],["Prismatic Sugar","Exotic"],
+["Ultimate Lollipop","OP"],["Ultimate Broccoli","OP"],["Ultimate Steak","OP"],
+["OP Candy Dragon","OP"],["OP Sugar King","OP"],["OP Rainbow God","OP"],
+["Original Candy God","OC"],["Original Lollipop God","OC"],["Original Broccoli God","OC"],
+["Original Steak God","OC"],["Original Rainbow God","OC"],["Original Sugar God","OC"]
+];
+
+const PETS = [
+{name:"Candy Worm",rarity:"Common",damage:0,speed:.10,range:0,credits:0},
+{name:"Gumdrop Mouse",rarity:"Common",damage:0,speed:.15,range:0,credits:1},
+{name:"Marshmallow Bunny",rarity:"Common",damage:1,speed:.10,range:0,credits:0},
+{name:"Cookie Cat",rarity:"Uncommon",damage:2,speed:.20,range:0,credits:1},
+{name:"Donut Puppy",rarity:"Uncommon",damage:2,speed:.15,range:5,credits:1},
+{name:"Cupcake Bird",rarity:"Uncommon",damage:1,speed:.30,range:5,credits:1},
+{name:"Chocolate Fox",rarity:"Rare",damage:5,speed:.25,range:5,credits:2},
+{name:"Ice Cream Bunny",rarity:"Rare",damage:3,speed:.50,range:5,credits:1},
+{name:"Candy Dragon",rarity:"Rare",damage:7,speed:.20,range:10,credits:2},
+{name:"Fire Candy Dragon",rarity:"Epic",damage:12,speed:.30,range:10,credits:2},
+{name:"Frozen Cookie Wolf",rarity:"Epic",damage:8,speed:.60,range:15,credits:2},
+{name:"Electric Lollipop Bat",rarity:"Epic",damage:10,speed:.70,range:5,credits:3},
+{name:"Golden Candy Dragon",rarity:"Legendary",damage:18,speed:.80,range:20,credits:3},
+{name:"Rainbow Bunny",rarity:"Legendary",damage:10,speed:1.20,range:10,credits:4},
+{name:"Candy Phoenix",rarity:"Legendary",damage:20,speed:.50,range:25,credits:3},
+{name:"Galaxy Dragon",rarity:"Mythic",damage:25,speed:1.00,range:30,credits:5},
+{name:"Void Candy Cat",rarity:"Mythic",damage:30,speed:1.30,range:20,credits:5},
+{name:"Star Sugar Wolf",rarity:"Mythic",damage:22,speed:1.40,range:35,credits:6},
+{name:"Ghost Candy",rarity:"Secret",damage:35,speed:1.50,range:35,credits:7},
+{name:"Glitched Cookie",rarity:"Secret",damage:40,speed:1.20,range:40,credits:8},
+{name:"Shadow Lollipop",rarity:"Secret",damage:45,speed:1.60,range:30,credits:8},
+{name:"Diamond Candy Dragon",rarity:"Exotic",damage:50,speed:1.70,range:45,credits:10},
+{name:"Star Candy Wolf",rarity:"Exotic",damage:45,speed:2.00,range:50,credits:11},
+{name:"Crystal Sugar Fox",rarity:"Exotic",damage:55,speed:1.50,range:55,credits:12},
+{name:"Ultimate Candy Dragon",rarity:"OP",damage:70,speed:2.00,range:60,credits:15},
+{name:"Overpowered Lollipop",rarity:"OP",damage:80,speed:2.30,range:70,credits:20},
+{name:"Candy Destroyer",rarity:"OP",damage:90,speed:1.90,range:75,credits:20},
+{name:"Original Candy God",rarity:"OC",damage:100,speed:2.50,range:80,credits:25},
+{name:"Original Void Dragon",rarity:"OC",damage:120,speed:2.30,range:100,credits:30},
+{name:"Original Rainbow God",rarity:"OC",damage:110,speed:2.80,range:90,credits:35},
+{name:"Flying Airhead",rarity:"Common",damage:1,speed:.20,range:5,credits:1},
+{name:"Swedish Fish",rarity:"Rare",damage:5,speed:.40,range:10,credits:2},
+{name:"Melting Chocolate",rarity:"Epic",damage:12,speed:.50,range:15,credits:3},
+{name:"Caramel Apple",rarity:"OC",damage:100,speed:2.50,range:80,credits:25},
+{name:"Chipy",rarity:"OC",damage:50,speed:20.0,range:60,credits:50,drop_chance:.0001}
+];
+
+const SKINS = [
+["Classic Lollipop",1],["Chocolate Bar",5],["Peppermint",10],["Ice Cream Cone",15],
+["Rainbow Lollipop",20],["Golden Lollipop",25],["Fire Lollipop",30],["Galaxy Lollipop",35],
+["Shadow Lollipop",40],["Diamond Lollipop",45],["Toxic Lollipop",50],["Candy King",50]
+];
+
+const BOSS_NAMES = {5:"BROCCOLI KING",10:"STEAK TITAN",15:"CANDY CRUSHER",20:"TOXIC BROCCOLI",25:"GOLDEN STEAK",30:"FIRE CANDY",35:"GALAXY BEAST",40:"SHADOW FOOD",45:"DIAMOND DESTROYER",50:"THE CANDY APOCALYPSE"};
+const BOSS_COLORS = {5:C.GREEN,10:C.BROWN,15:C.PINK,20:C.CYAN,25:C.GOLD,30:C.ORANGE,35:C.PURPLE,40:"#1e1e2d",45:C.LIGHT_BLUE,50:C.PINK};
+
+const RANKS = [
+{name:"Iron",min:0,max:99},
+{name:"Bronze",min:100,max:249},
+{name:"Gold",min:250,max:499},
+{name:"Platinum",min:500,max:849},
+{name:"Amethyst",min:850,max:1299},
+{name:"Candy Champion",min:1300,max:999999}
+];
+
+const DEFAULT_SAVE = {
+    candy_credits:0,current_wave:1,player_max_health:100,player_health:100,
+    player_damage:20,player_speed:5.0,player_attack_range:95,
+    health_level:0,damage_level:0,speed_level:0,range_level:0,
+    cards_owned:{},pets_owned:{},equipped_pet:null,equipped_skin:"Classic Lollipop",
+    equipped_card:null,username:"CandyPlayer",trophies:0,wins:0,losses:0
+};
+
+let save = loadSave();
+let currentMode="menu";
+let toastTimer=0;
+let waveState=null;
+let cardBattle=null;
+let socket=null;
+let multiRoom="";
+let multiReady=false;
+let keys={};
+let joystick={active:false,x:0,y:0};
+let lastWaveTime=0;
+
+function clone(v){return JSON.parse(JSON.stringify(v));}
+let audioCtx=null;
+function ensureAudio(){
+    try{
+        if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        if(audioCtx.state==="suspended") audioCtx.resume();
+        return audioCtx;
+    }catch{return null;}
+}
+function tone(freq,duration,type="sine",volume=.055,slide=0){
+    const ac=ensureAudio();
+    if(!ac)return;
+    const o=ac.createOscillator();
+    const g=ac.createGain();
+    const now=ac.currentTime;
+    o.type=type;o.frequency.setValueAtTime(freq,now);
+    if(slide) o.frequency.linearRampToValueAtTime(Math.max(20,freq+slide),now+duration);
+    g.gain.setValueAtTime(volume,now);
+    g.gain.exponentialRampToValueAtTime(.0001,now+duration);
+    o.connect(g);g.connect(ac.destination);o.start(now);o.stop(now+duration+.02);
+}
+function sfxClick(){tone(520,.055,"square",.035,-70);}
+function sfxAttack(){tone(760,.09,"sawtooth",.045,-180);}
+function sfxHit(){tone(180,.11,"triangle",.055,80);}
+function sfxDamage(){tone(105,.16,"sawtooth",.065,-45);}
+function sfxCollect(){tone(880,.07,"sine",.045,180);setTimeout(()=>tone(1200,.08,"sine",.035,120),40);}
+function sfxBoss(){tone(95,.35,"sawtooth",.07,25);setTimeout(()=>tone(70,.25,"square",.05,-10),90);}
+function sfxWin(){tone(660,.12,"triangle",.05,120);setTimeout(()=>tone(880,.14,"triangle",.05,170),100);setTimeout(()=>tone(1100,.2,"triangle",.045,220),210);}
+function sfxError(){tone(180,.12,"square",.045,-80);}
+document.addEventListener("pointerdown",e=>{if(e.target.closest("button"))ensureAudio();}, {passive:true});
+document.addEventListener("keydown",()=>ensureAudio(),{passive:true});
+document.addEventListener("click",e=>{if(e.target.closest("button")&&!e.target.closest("#attackTouch"))sfxClick();},{passive:true});
+
+
+function loadSave(){
+    try{
+        const keys=["candyCardsFullWebSave","candyCardsMainPyWeb","candyCardsWebSave"];
+        let parsed=null;
+        for(const key of keys){
+            const raw=localStorage.getItem(key);
+            if(raw){parsed=JSON.parse(raw);break;}
+        }
+        if(!parsed) return clone(DEFAULT_SAVE);
+        const out=Object.assign(clone(DEFAULT_SAVE),parsed);
+        /* Migrate older web-save field names into the main.py names. */
+        if(!out.cards_owned && parsed.cards) out.cards_owned=parsed.cards;
+        if(!out.pets_owned && parsed.pets) out.pets_owned=parsed.pets;
+        if(!out.equipped_pet && parsed.equippedPet) out.equipped_pet=parsed.equippedPet;
+        if(!out.equipped_skin && parsed.skin) out.equipped_skin=parsed.skin;
+        if(!out.current_wave && parsed.wave) out.current_wave=parsed.wave;
+        if(!Number.isFinite(Number(out.player_health))) out.player_health=out.player_max_health||100;
+        out.cards_owned=(out.cards_owned&&typeof out.cards_owned==="object")?out.cards_owned:{};
+        out.pets_owned=(out.pets_owned&&typeof out.pets_owned==="object")?out.pets_owned:{};
+        return out;
+    }catch{return clone(DEFAULT_SAVE);}
+}
+function saveGame(){try{localStorage.setItem("candyCardsFullWebSave",JSON.stringify(save));}catch{}}
+function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll("\"","&quot;").replaceAll("'","&#39;");}
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display="none",2200);}
+function rarityClass(r){return r.toLowerCase();}
+function card(name){return CANDY_CARDS.find(c=>c[0]===name)||CANDY_CARDS[0];}
+function pet(name){return PETS.find(p=>p.name===name)||null;}
+function currentRank(){return RANKS.find(r=>save.trophies>=r.min&&save.trophies<=r.max)||RANKS[0];}
+function countCards(){return CANDY_CARDS.filter(c=>Number(save.cards_owned[c[0]]||0)>0).length;}
+function countPets(){return PETS.filter(p=>Number(save.pets_owned[p.name]||0)>0).length;}
+function sanitize(){for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(0,Math.floor(Number(save.cards_owned[c[0]]||0)));for(const p of PETS)save.pets_owned[p.name]=Math.max(0,Math.floor(Number(save.pets_owned[p.name]||0)));}
+sanitize();
+if(!save.equipped_pet && localStorage.getItem("equipped_pet")) save.equipped_pet=localStorage.getItem("equipped_pet");
+
+function render(html){document.getElementById("app").innerHTML=html;}
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/50</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div></div>`;}
+
+// ================================================================
+// OG MAIN MENU — same important positions from main.py
+// ================================================================
+function menu(){
+    currentMode="menu";
+    render(`<div class="canvas-page">
+        <button class="gray og-device" onclick="devicePage()">DEVICE: ${detectDevice()}</button>
+        <div class="og-title">LOLLIPOP VS FOOD</div>
+        <div class="og-subtitle">CANDY CARDS + PETS</div>
+        <div class="og-lollipop"><div class="head"></div><div class="shine"></div><div class="stick"></div></div>
+        <div class="og-buttons">
+            <button class="green" onclick="startWaves()">PLAY</button>
+            <button class="blue" onclick="cardsPage()">CARDS</button>
+            <button class="purple" onclick="petsPage()">PETS</button>
+            <button class="orange" onclick="skinsPage()">SKINS</button>
+        </div>
+        <div class="og-info">Cards: ${countCards()}/${CANDY_CARDS.length} &nbsp;&nbsp; Pets: ${countPets()}/${PETS.length}</div>
+    </div>`);
+}
+function detectDevice(){const w=innerWidth;return w<650?"PHONE":w<1000?"TABLET":"PC";}
+
+// ================================================================
+// DEVICE
+// ================================================================
+function devicePage(){
+    currentMode="device";
+    render(`${topbar()}<div class="section"><h1>HOW ARE YOU PLAYING?</h1><div class="panel center"><h2>Choose your device</h2><div class="skill-row"><button class="green" onclick="setDevice('PC')">PC</button><button class="blue" onclick="setDevice('PHONE')">PHONE</button><button class="purple" onclick="setDevice('TABLET')">TABLET</button></div><p>Current browser profile: <b>${localStorage.getItem("candyCardsDevice")||detectDevice()}</b></p><p>CHANGE IT ANY TIME WITH DEVICE ON THE MAIN MENU.</p></div></div>`);
+}
+function setDevice(name){localStorage.setItem("candyCardsDevice",name);toast("DEVICE: "+name);menu();}
+
+// ================================================================
+// CARDS
+// ================================================================
+function cardsPage(){
+    currentMode="cards";
+    render(`${topbar()}<div class="section"><h1>CANDY CARDS</h1><div class="panel center"><button class="gold" onclick="openPack()">OPEN PACK — 10 CANDY</button><p>PACK GIVES <b>2 CARDS + 1 PET</b>.</p><p>Collected ${countCards()}/${CANDY_CARDS.length}</p></div><div class="scroll"><div class="grid6">${CANDY_CARDS.map(renderCard).join("")}</div></div></div>`);
+    paintCardCanvases();
+}
+function renderCard(c){
+    const [name,rarity]=c; const amount=Number(save.cards_owned[name]||0);
+    if(!amount)return `<div class="collection-card locked"><div style="font-size:70px;margin-top:30px">?</div><div class="card-name">LOCKED</div><div class="card-rarity" style="color:#888">${rarity}</div></div>`;
+    return `<div class="collection-card" style="border-color:${RARITY_COLORS[rarity]}"><canvas width="145" height="108" data-card="${esc(name)}"></canvas><div class="card-name">${esc(name)}</div><div class="card-rarity" style="color:${RARITY_COLORS[rarity]}">${rarity}</div><div class="card-amount">x${amount}</div><button class="small" onclick="equipCard('${encodeURIComponent(name)}')">${save.equipped_card===name?"EQUIPPED":"USE IN BATTLE"}</button></div>`;
+}
+function equipCard(encoded){const name=decodeURIComponent(encoded);if(!save.cards_owned[name])return toast("YOU DO NOT OWN THAT CARD!");save.equipped_card=name;saveGame();toast(name+" EQUIPPED!");cardsPage();}
+function weightedRarity(){let roll=Math.random()*100,total=0;for(const r of RARITIES){total+=RARITY_CHANCES[r];if(roll<=total)return r;}return "Common";}
+function randomCard(){const r=weightedRarity();const list=CANDY_CARDS.filter(c=>c[1]===r);return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS[0];}
+function randomPet(){return PETS[Math.floor(Math.random()*PETS.length)];}
+function openPack(){
+    ensureAudio();
+    if(save.candy_credits<10)return toast("NOT ENOUGH CANDY!");
+    save.candy_credits-=10;
+    sfxCollect();
+    const got=[randomCard(),randomCard()];
+    const p=Math.random()<0.0001?pet("Chipy"):randomPet();
+    for(const c of got)save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;
+    save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;
+    saveGame();
+    const modal=document.createElement("div");modal.className="modal";
+    modal.innerHTML=`<div class="modal-box"><h1>PACK OPENED!</h1><h2>2 CARDS + 1 PET</h2><div class="pack-grid">${got.map(c=>`<div class="pack-item" style="border-color:${RARITY_COLORS[c[1]]}"><canvas width="145" height="108" data-card="${esc(c[0])}"></canvas><h3>${esc(c[0])}</h3><b style="color:${RARITY_COLORS[c[1]]}">${c[1]}</b></div>`).join("")}<div class="pack-item" style="border-color:${RARITY_COLORS[p.rarity]}"><canvas class="pack-pet-canvas" width="145" height="108" data-pet="${esc(p.name)}"></canvas><h3>${esc(p.name)}</h3><b style="color:${RARITY_COLORS[p.rarity]}">${p.rarity} PET</b></div></div><br><button onclick="this.closest('.modal').remove();cardsPage()">CONTINUE</button></div>`;
+    document.body.appendChild(modal);paintCardCanvases();paintPetCanvases();
+}
+
+// ================================================================
+// CARD ART — based on draw_card() in main.py
+// ================================================================
+function paintCardCanvases(){document.querySelectorAll("canvas[data-card]").forEach(c=>drawCardArt(c.getContext("2d"),c.dataset.card,c.width,c.height));}
+function drawCardArt(ctx,name,w,h){
+    ctx.clearRect(0,0,w,h); const found=card(name), rarity=found[1], color=RARITY_COLORS[rarity], cx=w/2, cy=50;
+    const circ=(x,y,r,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();};
+    const rect=(x,y,ww,hh,col,rad=0)=>{ctx.fillStyle=col;if(rad){ctx.beginPath();ctx.roundRect(x,y,ww,hh,rad);ctx.fill();}else ctx.fillRect(x,y,ww,hh);};
+    const poly=(pts,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fill();};
+
+    // deterministic stars, like the seeded Pygame card art
+    let seed=0;for(let i=0;i<name.length;i++)seed=(seed+((i+1)*name.charCodeAt(i)))%997;
+    for(let i=0;i<5;i++){seed=(seed*73+41)%997;const sx=10+(seed%125),sy=18+((seed*7)%80);circ(sx,sy,1+(seed%3),"#fff");}
+
+    if(name.includes("Dragon")){
+        circ(cx,cy,34,color);poly([[cx-24,cy-18],[cx-45,cy-42],[cx-40,cy-5]],color);poly([[cx+24,cy-18],[cx+45,cy-42],[cx+40,cy-5]],color);poly([[cx-20,cy-25],[cx-14,cy-47],[cx-5,cy-24]],"#fff");poly([[cx+20,cy-25],[cx+14,cy-47],[cx+5,cy-24]],"#fff");circ(cx-11,cy-4,5,"#ffe24f");circ(cx+11,cy-4,5,"#ffe24f");return;
+    }
+    if(name.includes("Cookie")){circ(cx,cy,37,"#cd914b");for(let i=0;i<10;i++){seed=(seed*73+41)%997;circ(cx-25+(seed%50),cy-25+((seed*7)%50),4,C.DARK_BROWN);}return;}
+    if(name.includes("Donut")){circ(cx,cy,38,"#e6aa6f");circ(cx,cy,27,color);circ(cx,cy,9,C.DARK_BG);return;}
+    if(name.includes("Cupcake")){poly([[cx-30,cy],[cx+30,cy],[cx+20,cy+34],[cx-20,cy+34]],C.BROWN);circ(cx,cy-8,30,color);circ(cx-10,cy-16,5,"#fff");circ(cx+10,cy-20,5,"#fff");return;}
+    if(name.includes("Gumdrop")){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(cx,cy,28,34,0,0,Math.PI*2);ctx.fill();for(let i=0;i<15;i++){seed=(seed*73+41)%997;circ(cx-20+(seed%40),cy-20+((seed*3)%45),2,"#fff");}return;}
+    if(name.includes("Jelly Bean")){ctx.fillStyle=[C.RED,C.ORANGE,C.YELLOW,C.GREEN,C.BLUE,C.PURPLE][name.length%6];ctx.beginPath();ctx.ellipse(cx,cy,30,20,0,0,Math.PI*2);ctx.fill();rect(cx-15,cy-12,12,6,"rgba(255,255,255,.5)",3);return;}
+    if(name.includes("Broccoli")){rect(cx-7,cy+5,14,45,C.DARK_GREEN,5);circ(cx-20,cy,21,C.GREEN);circ(cx+20,cy,21,C.GREEN);circ(cx,cy-18,27,C.GREEN);circ(cx-10,cy-4,3,C.BLACK);circ(cx+10,cy-4,3,C.BLACK);return;}
+    if(name.includes("Steak")){ctx.fillStyle=C.BROWN;ctx.beginPath();ctx.ellipse(cx,cy,40,28,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#b96432";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(cx,cy,30,20,0,0,Math.PI*2);ctx.stroke();circ(cx-16,cy-6,5,C.DARK_BROWN);circ(cx+15,cy+7,5,C.DARK_BROWN);return;}
+    if(name.includes("Diamond")||name.includes("Crystal")){poly([[cx,cy-42],[cx+36,cy-8],[cx+20,cy+28],[cx-20,cy+28],[cx-36,cy-8]],C.LIGHT_BLUE);poly([[cx,cy-28],[cx+17,cy-5],[cx,cy+18],[cx-17,cy-5]],C.WHITE);return;}
+    if(name.includes("Rainbow")){const rs=[[42,C.RED],[34,C.ORANGE],[26,C.YELLOW],[18,C.GREEN],[10,C.BLUE]];for(const [r,col] of rs)circ(cx,cy,r,col);return;}
+    if(name.includes("Galaxy")||name.includes("Cosmic")){circ(cx,cy,38,C.PURPLE);circ(cx-13,cy+8,18,C.BLUE);circ(cx+14,cy-8,13,C.PINK);for(let i=0;i<14;i++){seed=(seed*73+41)%997;circ(cx-30+(seed%60),cy-30+((seed*7)%60),1+(seed%3),C.WHITE);}return;}
+    if(name.includes("Shadow")||name.includes("Phantom")){circ(cx,cy,38,"#191923");ctx.strokeStyle=C.PURPLE;ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,cy,30,0,Math.PI*2);ctx.stroke();circ(cx-11,cy-5,5,C.RED);circ(cx+11,cy-5,5,C.RED);return;}
+    if(name.includes("Ninja")||name.includes("Samurai")){circ(cx,cy,34,C.DARK_GRAY);rect(cx-30,cy-10,60,8,C.RED);circ(cx-10,cy-5,3,C.WHITE);circ(cx+10,cy-5,3,C.WHITE);return;}
+    if(name.includes("Knight")||name.includes("Warrior")){circ(cx,cy,32,color);rect(cx-22,cy-15,44,12,C.LIGHT_GRAY);ctx.strokeStyle=C.WHITE;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(cx+18,cy+15);ctx.lineTo(cx+42,cy-15);ctx.stroke();return;}
+    if(name.includes("King")||name.includes("Emperor")||name.includes("God")){circ(cx,cy+5,35,color);poly([[cx-28,cy-25],[cx-18,cy-50],[cx,cy-32],[cx+18,cy-50],[cx+28,cy-25]],C.GOLD);circ(cx-10,cy,5,C.WHITE);circ(cx+10,cy,5,C.WHITE);return;}
+    if(name.includes("Fire")||name.includes("Lava")){circ(cx,cy,38,C.RED);circ(cx,cy+5,28,C.ORANGE);poly([[cx-10,cy+5],[cx,cy-25],[cx+10,cy+5],[cx,cy+20]],C.YELLOW);return;}
+    if(name.includes("Frost")||name.includes("Frozen")||name.includes("Ice")){circ(cx,cy,37,C.LIGHT_BLUE);ctx.strokeStyle=C.WHITE;ctx.lineWidth=4;for(let a=0;a<Math.PI*2;a+=Math.PI/3){ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*32,cy+Math.sin(a)*32);ctx.stroke();}return;}
+    if(name.includes("Lollipop")){rect(cx-5,cy+20,10,60,C.WHITE,5);circ(cx,cy,36,color);ctx.strokeStyle=C.WHITE;ctx.lineWidth=4;ctx.beginPath();ctx.arc(cx,cy,25,.3,1.5);ctx.stroke();return;}
+    if(name.includes("Candy")||name.includes("Sugar")){circ(cx,cy,36,color);for(let a=0;a<Math.PI*2;a+=Math.PI/4)circ(cx+Math.cos(a)*28,cy+Math.sin(a)*28,4,C.WHITE);return;}
+    circ(cx,cy,34,color);poly([[cx,cy-25],[cx+24,cy],[cx,cy+25],[cx-24,cy]],C.WHITE);circ(cx,cy,12,color);
+}
+
+// ================================================================
+// PETS
+// ================================================================
+function petsPage(){
+    currentMode="pets";
+    render(`${topbar()}<div class="section"><h1>PET COLLECTION</h1><div class="panel center">Equipped: <b>${esc(save.equipped_pet||"None")}</b> • Collected ${countPets()}/${PETS.length}</div><div class="scroll"><div class="grid5">${PETS.map(p=>{
+        const o=Number(save.pets_owned[p.name]||0);
+        return `<div class="pet-card" style="border-color:${RARITY_COLORS[p.rarity]};opacity:${o?1:.55}"><canvas class="pet-canvas" width="180" height="105" data-pet="${esc(p.name)}"></canvas><div class="card-name">${o?esc(p.name):"LOCKED"}</div><div class="card-rarity" style="color:${RARITY_COLORS[p.rarity]}">${p.rarity}</div><div class="card-amount">x${o}</div><div class="small-text">Damage ${p.damage} • Speed ${p.speed} • Range ${p.range} • Candy +${p.credits}</div>${o?`<button class="small pet-use-btn" onclick="equipPet('${encodeURIComponent(p.name)}')">${save.equipped_pet===p.name?"USED":"USE"}</button>`:""}</div>`;
+    }).join("")}</div></div></div>`);
+    paintPetCanvases();
+}
+function equipPet(encoded){
+    const name=decodeURIComponent(String(encoded));
+    const owned=Number(save.pets_owned[name]||0);
+    if(owned<=0){
+        toast("YOU DO NOT OWN THAT PET!");
+        sfxError();
+        return;
+    }
+    save.equipped_pet=name;
+    saveGame();
+    sfxClick();
+    toast(name+" EQUIPPED!");
+    petsPage();
+}
+
+function paintPetCanvases(){
+    document.querySelectorAll("canvas[data-pet]").forEach(c=>{
+        const p=pet(c.dataset.pet);
+        if(p) drawPetArt(c.getContext("2d"),c.width/2,55,p,1.0);
+    });
+}
+
+// ================================================================
+// SKINS
+// ================================================================
+function skinsPage(){
+    currentMode="skins";
+    render(`${topbar()}<div class="section"><h1>SKINS</h1><div class="panel center">Skins unlock as your SOLO WAVE advances.</div><div class="skin-grid">${SKINS.map(s=>{const unlocked=save.current_wave>=s[1],eq=save.equipped_skin===s[0];return `<div class="skin-box"><div style="font-size:50px">🍭</div><h2>${esc(s[0])}</h2><p>UNLOCKS AT WAVE ${s[1]}</p><button ${unlocked?"":"disabled"} class="${eq?"gold":"orange"}" onclick="equipSkin('${encodeURIComponent(s[0])}')">${eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED"}</button></div>`;}).join("")}</div></div>`);
+}
+function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n);if(!s||save.current_wave<s[1])return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
+
+// ================================================================
+// SHOP
+// ================================================================
+function shopPage(){
+    currentMode="shop";
+    render(`${topbar()}<div class="section"><h1>CANDY SHOP</h1><div class="panel"><h2>PLAYER UPGRADES</h2><div class="skill-row"><button onclick="buyHealth()">HEALTH +20 — 10</button><button onclick="buyDamage()">DAMAGE +5 — 15</button><button onclick="buySpeed()">SPEED +0.5 — 20</button><button onclick="buyRange()">RANGE +15 — 20</button><button class="gold" onclick="openPack()">PACK — 10</button></div></div><div class="panel center">HP ${save.player_health}/${save.player_max_health} • Damage ${save.player_damage} • Speed ${save.player_speed} • Range ${save.player_attack_range}<br>Candy: ${save.candy_credits}</div></div>`);
+}
+function buyHealth(){if(save.candy_credits<10)return toast("NOT ENOUGH CANDY!");save.candy_credits-=10;save.player_max_health+=20;save.player_health+=20;save.health_level++;sfxCollect();saveGame();toast("HEALTH +20!");shopPage();}
+function buyDamage(){if(save.candy_credits<15)return toast("NOT ENOUGH CANDY!");save.candy_credits-=15;save.player_damage+=5;save.damage_level++;sfxCollect();saveGame();toast("DAMAGE +5!");shopPage();}
+function buySpeed(){if(save.candy_credits<20)return toast("NOT ENOUGH CANDY!");save.candy_credits-=20;save.player_speed+=.5;save.speed_level++;sfxCollect();saveGame();toast("SPEED +0.5!");shopPage();}
+function buyRange(){if(save.candy_credits<20)return toast("NOT ENOUGH CANDY!");save.candy_credits-=20;save.player_attack_range+=15;save.range_level++;sfxCollect();saveGame();toast("RANGE +15!");shopPage();}
+
+// ================================================================
+// SOLO WAVES — EXACT IMPORTANT FORMULAS FROM main.py
+// ================================================================
+function startWaves(){
+    currentMode="waves";
+    ensureAudio();
+
+    /* A previous Game Over saves HP at 0. Starting PLAY must always
+       revive the player to full HP instead of loading a dead player. */
+    if(Number(save.player_health) <= 0){
+        save.player_health = Number(save.player_max_health) || 100;
+        saveGame();
+    }
+
+    waveState={
+        wave:Math.max(1,Math.min(50,save.current_wave)),
+        player:{x:WIDTH/2,y:HEIGHT/2,maxHealth:save.player_max_health,health:save.player_health,damage:save.player_damage,speed:save.player_speed,range:save.player_attack_range,cooldown:0},
+        enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false
+    };
+    renderWavePage();
+    spawnWave(waveState.wave);
+}
+function renderWavePage(){
+    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="1280" height="720"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/50</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="shopPage()">SHOP</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
+    const c=document.getElementById("waveCanvas");
+    c.addEventListener("pointerdown",e=>{if(e.target===c)waveAttack();});
+    document.getElementById("attackTouch").addEventListener("pointerdown",e=>{e.preventDefault();waveAttack();});
+    setupJoystick();
+    lastWaveTime=performance.now();
+    requestAnimationFrame(waveLoop);
+}
+function spawnWave(w){
+    waveState.enemies=[];waveState.wave=w;
+    const enemyCount=Math.min(50,5+w*2);
+    if(w===50){spawnEnemy("final_boss",true);sfxBoss();for(let i=0;i<10;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast("WAVE 50 — FINAL BOSS!");return;}
+    if(w%5===0){const n=Math.max(1,enemyCount-1);sfxBoss();spawnEnemy(Math.random()<.5?"broccoli":"steak",true);for(let i=0;i<n;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast(BOSS_NAMES[w]+" APPEARS!");}
+    else{for(let i=0;i<enemyCount;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast("WAVE "+w+"!");}
+}
+function spawnEnemy(type,boss=false){
+    const side=Math.floor(Math.random()*4);let x,y;
+    if(side===0){x=50+Math.random()*(WIDTH-100);y=100;}
+    else if(side===1){x=WIDTH-50;y=100+Math.random()*(HEIGHT-150);}
+    else if(side===2){x=50+Math.random()*(WIDTH-100);y=HEIGHT-50;}
+    else{x=50;y=100+Math.random()*(HEIGHT-150);}
+    const w=waveState.wave;
+    let e={type,x,y,boss,alive:true,attackTimer:boss?.7:(.2+Math.random()*.8)};
+    if(type==="final_boss"){e.radius=82;e.maxHealth=3000+w*100;e.health=e.maxHealth;e.speed=.65;e.damage=85;e.attackTimer=.7;}
+    else if(type==="broccoli"){e.radius=28;e.maxHealth=35+w*5;e.health=e.maxHealth;e.speed=1.2+w*.025;e.damage=7+Math.floor(w/4);}
+    else{e.radius=30;e.maxHealth=50+w*7;e.health=e.maxHealth;e.speed=.9+w*.02;e.damage=10+Math.floor(w/3);}
+    if(boss&&type!=="final_boss"){e.maxHealth*=5;e.health=e.maxHealth;e.radius*=1.55;e.speed*=.75;e.damage*=2;}
+    e.name=BOSS_NAMES[w]||"FOOD BOSS";e.color=BOSS_COLORS[w]||C.RED;waveState.enemies.push(e);
+}
+function totalPet(stat){const p=pet(save.equipped_pet);return p?Number(p[stat]||0):0;}
+function totalDamage(){return save.player_damage+totalPet("damage");}
+function totalSpeed(){return save.player_speed+totalPet("speed");}
+function totalRange(){return save.player_attack_range+totalPet("range");}
+function totalCreditBonus(){return totalPet("credits");}
+function waveAttack(){
+    if(!waveState||!waveState.running)return;
+    sfxAttack();
+    const p=waveState.player;if(p.cooldown>0)return;p.cooldown=.35;waveState.effects.push({x:p.x,y:p.y,r:totalRange(),life:.18});
+    for(const e of waveState.enemies){if(!e.alive)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<=totalRange()+e.radius){e.health-=totalDamage();sfxHit();hitParticles(e.x,e.y);textEffect(e.x,e.y-35,"-"+Math.round(totalDamage()),C.YELLOW);if(e.health<=0)killEnemy(e);}}
+}
+function killEnemy(e){if(!e.alive)return;sfxHit();e.alive=false;const w=waveState.wave;const reward=(e.boss?(8+Math.floor(w/2)):1)+totalCreditBonus();save.candy_credits+=reward;explosion(e.x,e.y);textEffect(e.x,e.y-40,"+"+reward+" Candy",C.YELLOW);if(e.boss){sfxWin();toast("DEFEATED: "+e.name+"!");}if(Math.random()<.35)waveState.pickups.push({x:e.x,y:e.y,value:1+Math.floor(Math.random()*4),life:10,bob:Math.random()*10});if(Math.random()<.035){const c=randomCard();save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;toast("CARD DROP: "+c[0]+" ["+c[1]+"]");}if(Math.random()<.01){const p=Math.random()<.0001?pet("Chipy"):randomPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;toast("PET DROP: "+p.name+" ["+p.rarity+"]");}saveGame();}
+function hitParticles(x,y){for(let i=0;i<8;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:.6,size:3+Math.random()*5,color:[C.RED,C.YELLOW,C.ORANGE,C.WHITE][Math.floor(Math.random()*4)]});}
+function explosion(x,y){for(let i=0;i<24;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:.5+Math.random()*.7,size:3+Math.random()*5,color:[C.RED,C.ORANGE,C.YELLOW,C.GREEN,C.WHITE,C.CYAN][Math.floor(Math.random()*6)]});}
+function textEffect(x,y,text,color){waveState.texts.push({x,y,text,color,life:1.3});}
+function damagePlayer(amount){
+    const p=waveState.player;
+    sfxDamage();
+    p.health-=amount;
+    hitParticles(p.x,p.y);
+    textEffect(p.x,p.y-45,"-"+Math.round(amount),C.RED);
+
+    if(p.health<=0){
+        p.health=0;
+        waveState.running=false;
+        save.player_health=0;
+        saveGame();
+
+        setTimeout(()=>{
+            alert("GAME OVER — WAVE "+waveState.wave);
+            menu();
+        },30);
+    }
+}
+function completeWave(){
+    if(waveState.finished)return;
+
+    waveState.finished=true;
+    const w=waveState.wave;
+    sfxWin();
+    waveState.running=false;
+
+    /* Save the actual HP left at the end of the wave, then apply the
+       original 20% max-HP healing before the next wave. */
+    save.player_health=Math.max(0,Math.min(save.player_max_health,Math.round(waveState.player.health)));
+
+    if(w<50){
+        save.current_wave=w+1;
+        save.player_health=Math.min(
+            save.player_max_health,
+            save.player_health+Math.floor(save.player_max_health*.2)
+        );
+        saveGame();
+
+        const unlock=SKINS.find(s=>s[1]===save.current_wave);
+        if(unlock)toast("NEW SKIN UNLOCKED: "+unlock[0]+"!");
+        setTimeout(()=>shopPage(),250);
+    }else{
+        save.current_wave=50;
+        save.player_health=save.player_max_health;
+        saveGame();
+        setTimeout(()=>{
+            alert("THE CANDY APOCALYPSE DEFEATED! VICTORY!");
+            menu();
+        },100);
+    }
+}
+function pauseWaves(){if(!waveState)return;waveState.running=false;render(`${topbar()}<div class="section center"><h1>PAUSED</h1><div class="panel"><button class="green" onclick="resumeWaves()">RESUME</button><button class="gray" onclick="menu()">MENU</button></div></div>`);}
+function resumeWaves(){if(!waveState)return;ensureAudio();waveState.running=true;renderWavePage();}
+function waveLoop(now){if(!waveState||!waveState.running)return;const dt=Math.min(.05,(now-lastWaveTime)/1000);lastWaveTime=now;updateWave(dt);drawWave();requestAnimationFrame(waveLoop);}
+function updateWave(dt){
+    const p=waveState.player;p.cooldown=Math.max(0,p.cooldown-dt);
+    let dx=joystick.x,dy=joystick.y;
+    if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;if(keys.w||keys.arrowup)dy-=1;if(keys.s||keys.arrowdown)dy+=1;
+    const len=Math.hypot(dx,dy);if(len>0){dx/=len;dy/=len;p.x+=dx*totalSpeed()*60*dt;p.y+=dy*totalSpeed()*60*dt;}
+    p.x=Math.max(50,Math.min(WIDTH-50,p.x));p.y=Math.max(100,Math.min(HEIGHT-70,p.y));
+    for(const e of waveState.enemies){if(!e.alive)continue;const ex=p.x-e.x,ey=p.y-e.y,d=Math.hypot(ex,ey);if(d>1&&d>e.radius+45){e.x+=(ex/d)*e.speed*60*dt;e.y+=(ey/d)*e.speed*60*dt;}e.attackTimer-=dt;if(d<e.radius+45&&e.attackTimer<=0){damagePlayer(e.damage);e.attackTimer=e.type==="final_boss"?.75:1.0;}}
+    for(const pick of waveState.pickups){pick.life-=dt;pick.bob+=dt*5;pick.y+=Math.sin(pick.bob)*.04;const d=Math.hypot(p.x-pick.x,p.y-pick.y);if(d<42){sfxCollect();save.candy_credits+=pick.value;pick.life=0;saveGame();}}
+    waveState.pickups=waveState.pickups.filter(x=>x.life>0);
+    for(const x of waveState.particles){x.life-=dt;x.x+=x.vx*60*dt;x.y+=x.vy*60*dt;x.vy+=3*dt;}
+    waveState.particles=waveState.particles.filter(x=>x.life>0);
+    for(const x of waveState.texts){x.life-=dt;x.y-=35*dt;}waveState.texts=waveState.texts.filter(x=>x.life>0);
+    for(const x of waveState.effects)x.life-=dt;waveState.effects=waveState.effects.filter(x=>x.life>0);
+    waveState.enemies=waveState.enemies.filter(e=>e.alive);
+    if(waveState.enemies.length===0)completeWave();
+    document.getElementById("hpFill").style.width=(Math.max(0,p.health/p.maxHealth)*100)+"%";document.getElementById("hpText").textContent=`HP ${Math.round(p.health)}/${p.maxHealth}`;document.getElementById("candyText").textContent=`Candy: ${save.candy_credits}`;document.getElementById("waveText").textContent=`Wave ${waveState.wave}/50`;
+}
+function drawWave(){
+    const c=document.getElementById("waveCanvas");if(!c)return;const ctx=c.getContext("2d");
+    ctx.fillStyle=C.DARK_BG;ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.strokeStyle="rgba(255,255,255,.035)";ctx.lineWidth=1;
+    for(let y=100;y<HEIGHT;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);ctx.stroke();}for(let x=0;x<WIDTH;x+=50){ctx.beginPath();ctx.moveTo(x,85);ctx.lineTo(x,HEIGHT);ctx.stroke();}
+    for(const p of waveState.pickups){ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.YELLOW;ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(p.x-3,p.y-3,3,0,Math.PI*2);ctx.fill();}
+    for(const e of waveState.enemies)drawEnemy(ctx,e);drawPlayer(ctx,waveState.player.x,waveState.player.y);drawEquippedPet(ctx,waveState.player.x+78,waveState.player.y+10);
+    for(const e of waveState.effects){ctx.strokeStyle=C.YELLOW;ctx.lineWidth=5;ctx.globalAlpha=Math.max(0,e.life/.18);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1+(.18-e.life)*1.2),0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;
+    for(const p of waveState.particles){ctx.globalAlpha=Math.max(0,p.life/1.2);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,Math.max(1,p.size),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+    for(const t of waveState.texts){ctx.globalAlpha=Math.max(0,t.life/1.3);ctx.fillStyle=t.color;ctx.font="25px Arial";ctx.textAlign="center";ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;
+}
+function drawPlayer(ctx,x,y){
+    ctx.fillStyle="#141414";ctx.beginPath();ctx.ellipse(x,y+38,28,9,0,0,Math.PI*2);ctx.fill();
+    const s=save.equipped_skin;
+    if(s==="Chocolate Bar"){ctx.fillStyle=C.BROWN;ctx.fillRect(x-34,y-42,68,82);ctx.strokeStyle=C.DARK_BROWN;ctx.lineWidth=4;ctx.strokeRect(x-34,y-42,68,82);for(const ox of[-17,17])for(const oy of[-22,0,22]){ctx.fillStyle="#b96432";ctx.fillRect(x+ox-8,y+oy-8,16,16);};ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+40,14,55);return;}
+    if(s==="Peppermint"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+30,14,70);ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.RED;ctx.lineWidth=6;ctx.stroke();return;}
+    if(s==="Ice Cream Cone"){ctx.fillStyle="#cd914b";ctx.beginPath();ctx.moveTo(x-27,y+8);ctx.lineTo(x+27,y+8);ctx.lineTo(x,y+82);ctx.closePath();ctx.fill();ctx.strokeStyle=C.BROWN;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#ff96bf";ctx.beginPath();ctx.arc(x,y-24,31,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffe2ac";ctx.beginPath();ctx.arc(x-22,y-4,23,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d2a0ff";ctx.beginPath();ctx.arc(x+22,y-4,23,0,Math.PI*2);ctx.fill();return;}
+    if(s==="Rainbow Lollipop"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);for(const[a,b]of[[42,C.RED],[34,C.ORANGE],[26,C.YELLOW],[18,C.GREEN],[10,C.BLUE]]){ctx.fillStyle=b;ctx.beginPath();ctx.arc(x,y,a,0,Math.PI*2);ctx.fill();}return;}
+    if(s==="Golden Lollipop"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.YELLOW;ctx.beginPath();ctx.arc(x,y,33,0,Math.PI*2);ctx.fill();return;}
+    if(s==="Fire Lollipop"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);for(const[a,b]of[[42,C.RED],[31,C.ORANGE],[19,C.YELLOW]]){ctx.fillStyle=b;ctx.beginPath();ctx.arc(x,y,a,0,Math.PI*2);ctx.fill();}return;}
+    if(s==="Galaxy Lollipop"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.PURPLE;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.BLUE;ctx.beginPath();ctx.arc(x-10,y-7,18,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.PINK;ctx.beginPath();ctx.arc(x+14,y+9,15,0,Math.PI*2);ctx.fill();for(const[a,b,c]of[[-15,-18,4],[12,-10,3],[2,18,3]]){ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(x+a,y+b,c,0,Math.PI*2);ctx.fill();}return;}
+    if(s==="Shadow Lollipop"){ctx.fillStyle="#464650";ctx.fillRect(x-7,y,14,70);ctx.fillStyle="#191923";ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.PURPLE;ctx.lineWidth=5;ctx.stroke();return;}
+    if(s==="Diamond Lollipop"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.LIGHT_BLUE;ctx.beginPath();ctx.moveTo(x,y-43);ctx.lineTo(x+38,y-10);ctx.lineTo(x,y+39);ctx.lineTo(x-38,y-10);ctx.closePath();ctx.fill();ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.moveTo(x,y-30);ctx.lineTo(x+22,y-10);ctx.lineTo(x,y+25);ctx.lineTo(x-22,y-10);ctx.closePath();ctx.fill();return;}
+    if(s==="Toxic Lollipop"){ctx.fillStyle=C.DARK_GREEN;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.GREEN;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();return;}
+    if(s==="Candy King"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+5,14,70);ctx.fillStyle=C.PINK;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.BLUE;ctx.beginPath();ctx.arc(x,y,30,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.arc(x,y,19,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.moveTo(x-27,y-38);ctx.lineTo(x-16,y-58);ctx.lineTo(x,y-42);ctx.lineTo(x+16,y-58);ctx.lineTo(x+27,y-38);ctx.closePath();ctx.fill();return;}
+    ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.RED;ctx.beginPath();ctx.arc(x,y,40,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ff7878";ctx.beginPath();ctx.arc(x-13,y-13,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.WHITE;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,27,.4,1.5);ctx.stroke();
+}
+function drawEquippedPet(ctx,x,y){
+    const p=pet(save.equipped_pet);
+    if(!p)return;
+    drawPetArt(ctx,x,y,p);
+}
+
+// ================================================================
+// PET ART
+// Every pet gets its own simple canvas drawing. No emoji are used
+// for equipped pets in the actual wave arena.
+// ================================================================
+function drawPetArt(ctx,x,y,p,scale=1){
+    const n=p.name;
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(scale,scale);
+    ctx.lineJoin="round";
+    ctx.lineCap="round";
+
+    const D="#17131c";
+    const W="#ffffff";
+    const P=C.PINK;
+    const Y=C.YELLOW;
+    const G=C.GREEN;
+    const B=C.BLUE;
+    const O=C.ORANGE;
+    const R=C.RED;
+    const Pu=C.PURPLE;
+    const Br=C.BROWN;
+    const DB=C.DARK_BROWN;
+
+    const circ=(cx,cy,r,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();};
+    const ell=(cx,cy,rx,ry,col,rot=0)=>{ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,rot,0,Math.PI*2);ctx.fill();};
+    const rect=(rx,ry,rw,rh,col,rad=0)=>{ctx.fillStyle=col;if(rad){ctx.beginPath();ctx.roundRect(rx,ry,rw,rh,rad);ctx.fill();}else ctx.fillRect(rx,ry,rw,rh);};
+    const poly=(pts,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fill();};
+    const eye=(ex,ey,col=Y,r=4)=>{circ(ex,ey,r,col);circ(ex,ey,r*.45,D);};
+    const line=(x1,y1,x2,y2,col=W,w=2)=>{ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
+    const shadow=()=>ell(0,30,30,7,"rgba(0,0,0,.35)");
+
+    shadow();
+
+    if(n==="Chipy"){
+        ell(0,7,34,24,"#35353d");
+        circ(0,-17,29,"#3f4048");
+        poly([[-24,-36],[-17,-62],[-3,-41]],"#3f4048");
+        poly([[24,-36],[17,-62],[3,-41]],"#3f4048");
+        circ(0,-9,18,W);
+        eye(-10,-21,"#ffe35a",5); eye(10,-21,"#ffe35a",5);
+        circ(0,-9,3,"#111");
+        ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-5,7,.15,2.95);ctx.stroke();
+        line(-18,-8,-38,-13,"#eee",2);line(-18,-3,-40,2,"#eee",2);line(18,-8,38,-13,"#eee",2);line(18,-3,40,2,"#eee",2);
+        return ctx.restore();
+    }
+
+    if(n==="Candy Worm"){
+        const colors=[P,Y,G,B];
+        for(let i=0;i<5;i++){circ(-30+i*15,8-(i%2)*5,12,colors[i%4]);}
+        eye(35,-2,W,3);return ctx.restore();
+    }
+
+    if(n==="Gumdrop Mouse"){
+        ell(0,7,25,19,Pu);circ(-15,-16,11,"#c18bef");circ(15,-16,11,"#c18bef");eye(-8,-2);eye(8,-2);line(24,8,43,16,P,3);circ(0,4,3,P);return ctx.restore();
+    }
+
+    if(n==="Marshmallow Bunny"){
+        ell(0,6,25,20,"#fff0f5");ell(-11,-31,9,24,W);ell(11,-31,9,24,W);circ(-9,-12,4,D);circ(9,-12,4,D);circ(0,-3,4,P);return ctx.restore();
+    }
+
+    if(n==="Cookie Cat"){
+        ell(0,8,29,21,"#a86b36");circ(0,-17,26,"#d39a58");poly([[-22,-34],[-13,-56],[-3,-39]],"#b87c40");poly([[22,-34],[13,-56],[3,-39]],"#b87c40");eye(-9,-19);eye(9,-19);circ(-14,-3,3,DB);circ(14,2,3,DB);circ(2,5,3,DB);return ctx.restore();
+    }
+
+    if(n==="Donut Puppy"){
+        ell(0,8,29,21,"#a96331");circ(0,-16,25,"#d58a50");ell(-20,-16,10,16,"#8b512d",-.4);ell(20,-16,10,16,"#8b512d",.4);eye(-8,-18);eye(8,-18);ell(0,-5,7,4,P);line(-4,4,4,4,"#4b2518",2);return ctx.restore();
+    }
+
+    if(n==="Cupcake Bird"){
+        ell(0,9,25,19,B);ell(-4,-12,26,17,P);poly([[18,-3],[38,3],[18,8]],Y);poly([[-12,2],[-36,-14],[-24,12]],"#ff82ba");eye(-7,-17,W,3);eye(7,-17,W,3);return ctx.restore();
+    }
+
+    if(n==="Chocolate Fox"){
+        ell(0,8,29,21,"#b65d2c");circ(0,-17,26,"#e18a46");poly([[-23,-35],[-14,-60],[-3,-39]],Br);poly([[23,-35],[14,-60],[3,-39]],Br);poly([[-14,-18],[-3,-5],[-22,-2]],"#f4c58d");poly([[14,-18],[3,-5],[22,-2]],"#f4c58d");eye(-9,-20,Y,4);eye(9,-20,Y,4);return ctx.restore();
+    }
+
+    if(n==="Ice Cream Bunny"){
+        ell(0,7,25,19,"#dff7ff");ell(-11,-33,8,24,"#e9faff");ell(11,-33,8,24,"#e9faff");circ(-8,-18,12,P);circ(9,-21,12,C.LIGHT_BLUE);eye(-8,-7);eye(8,-7);return ctx.restore();
+    }
+
+    if(n==="Fire Candy Dragon"){
+        ell(0,7,31,22,"#8b281f");circ(0,-17,28,O);poly([[-24,-36],[-15,-61],[-2,-38]],R);poly([[24,-36],[15,-61],[2,-38]],R);poly([[0,10],[27,1],[22,20]],Y);eye(-10,-21,Y,4);eye(10,-21,Y,4);ctx.fillStyle=Y;ctx.beginPath();ctx.moveTo(-8,-55);ctx.lineTo(0,-73);ctx.lineTo(8,-55);ctx.closePath();ctx.fill();return ctx.restore();
+    }
+
+    if(n==="Candy Dragon"){
+        ell(0,7,31,22,G);circ(0,-17,28,"#54e28b");poly([[-24,-36],[-15,-60],[-2,-39]],G);poly([[24,-36],[15,-60],[2,-39]],G);ctx.strokeStyle=G;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(24,12);ctx.quadraticCurveTo(50,31,42,2);ctx.stroke();eye(-10,-21,W,4);eye(10,-21,W,4);return ctx.restore();
+    }
+
+    if(n==="Golden Candy Dragon"){
+        ell(0,7,31,22,C.GOLD);circ(0,-17,28,"#ffd86a");poly([[-24,-36],[-15,-60],[-2,-39]],C.GOLD);poly([[24,-36],[15,-60],[2,-39]],C.GOLD);circ(-10,-21,4,D);circ(10,-21,4,D);poly([[26,8],[46,0],[39,14]],C.GOLD);return ctx.restore();
+    }
+
+    if(n==="Galaxy Dragon"){
+        ell(0,7,31,22,"#30205d");circ(0,-17,28,Pu);circ(-10,-23,4,W);circ(11,-10,3,C.LIGHT_BLUE);circ(12,-26,2,P);poly([[-24,-36],[-15,-60],[-2,-39]],Pu);poly([[24,-36],[15,-60],[2,-39]],Pu);eye(-10,-20,C.CYAN,4);eye(10,-20,C.CYAN,4);return ctx.restore();
+    }
+
+    if(n==="Void Candy Cat"){
+        ell(0,8,31,22,"#26263a");circ(0,-17,28,"#343450");poly([[-23,-36],[-15,-60],[-2,-40]],"#343450");poly([[23,-36],[15,-60],[2,-40]],"#343450");eye(-10,-20,Pu,5);eye(10,-20,Pu,5);ctx.strokeStyle=Pu;ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-8,8,.2,2.9);ctx.stroke();return ctx.restore();
+    }
+
+    if(n==="Frozen Cookie Wolf"){
+        ell(0,8,31,22,"#cfefff");circ(0,-17,28,"#e9fbff");poly([[-24,-36],[-13,-61],[-2,-40]],C.LIGHT_BLUE);poly([[24,-36],[13,-61],[2,-40]],C.LIGHT_BLUE);poly([[-17,-8],[-5,4],[-21,7]],"#fff");poly([[17,-8],[5,4],[21,7]],"#fff");eye(-10,-20,"#4e7cff",4);eye(10,-20,"#4e7cff",4);circ(0,-9,3,DB);return ctx.restore();
+    }
+
+    if(n==="Electric Lollipop Bat"){
+        ell(0,7,28,18,"#332642");poly([[-18,0],[-52,-28],[-34,17]],"#5b3d78");poly([[18,0],[52,-28],[34,17]],"#5b3d78");eye(-8,-8,C.CYAN,4);eye(8,-8,C.CYAN,4);ctx.strokeStyle=C.CYAN;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(28,-7);ctx.lineTo(39,-19);ctx.lineTo(34,2);ctx.stroke();rect(30,-46,5,27,W,2);circ(33,-50,12,P);return ctx.restore();
+    }
+
+    if(n==="Flying Airhead"){
+        ell(0,0,28,22,P);poly([[-20,14],[-38,-6],[-23,-2]],W);poly([[20,14],[38,-6],[23,-2]],W);eye(-9,-4);eye(9,-4);line(-4,7,4,7,D,2);return ctx.restore();
+    }
+
+    if(n==="Swedish Fish"){
+        ctx.fillStyle=R;ctx.beginPath();ctx.moveTo(-35,8);ctx.quadraticCurveTo(-12,-23,18,-8);ctx.quadraticCurveTo(37,2,20,16);ctx.quadraticCurveTo(-4,30,-35,8);ctx.fill();poly([[-28,4],[-47,-12],[-39,9]],R);eye(11,-6,W,3);return ctx.restore();
+    }
+
+    if(n==="Melting Chocolate"){
+        rect(-34,-20,68,55,"#8b4c27",12);circ(-16,-24,12,"#c07a44");circ(6,-28,14,"#c07a44");circ(24,-22,10,"#c07a44");eye(-10,-2);eye(10,-2);return ctx.restore();
+    }
+
+    if(n==="Caramel Apple"){
+        circ(0,-6,29,"#d94b35");rect(-5,16,10,27,Br,4);ctx.strokeStyle="#e0a75c";ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,-3,19,.1,2.5);ctx.stroke();return ctx.restore();
+    }
+
+    if(n==="Diamond Candy Dragon"){
+        ell(0,7,31,22,C.LIGHT_BLUE);poly([[-24,-36],[-15,-61],[-2,-39]],C.LIGHT_BLUE);poly([[24,-36],[15,-61],[2,-39]],C.LIGHT_BLUE);poly([[0,-50],[16,-23],[0,8],[-16,-23]],W);eye(-10,-19,C.CYAN,4);eye(10,-19,C.CYAN,4);return ctx.restore();
+    }
+
+    if(n==="Star Candy Wolf"){
+        ell(0,8,31,22,"#6d69a8");circ(0,-18,27,"#8c86c8");poly([[-23,-36],[-13,-62],[-2,-40]],"#7771b4");poly([[23,-36],[13,-62],[2,-40]],"#7771b4");eye(-10,-21,Y,4);eye(10,-21,Y,4);poly([[0,-4],[4,4],[12,4],[6,10],[8,18],[0,13],[-8,18],[-6,10],[-12,4],[-4,4]],Y);return ctx.restore();
+    }
+
+    if(n==="Crystal Sugar Fox"){
+        ell(0,8,29,21,"#7ce8ed");circ(0,-18,26,"#b9ffff");poly([[-23,-36],[-14,-60],[-3,-40]],C.CYAN);poly([[23,-36],[14,-60],[3,-40]],C.CYAN);poly([[0,-42],[9,-25],[0,-8],[-9,-25]],W);eye(-9,-20,C.PURPLE,4);eye(9,-20,C.PURPLE,4);return ctx.restore();
+    }
+
+    if(n==="Ultimate Candy Dragon"){
+        ell(0,8,33,23,"#b51f39");circ(0,-18,30,R);poly([[-26,-38],[-18,-67],[-3,-42]],R);poly([[26,-38],[18,-67],[3,-42]],R);poly([[-9,0],[0,-20],[9,0],[0,18]],C.GOLD);eye(-10,-21,Y,5);eye(10,-21,Y,5);return ctx.restore();
+    }
+
+    if(n==="Overpowered Lollipop"){
+        ell(0,8,32,23,"#ff46b2");circ(0,-18,29,"#ff69c5");rect(-4,-48,8,32,W,3);circ(0,-52,17,C.CYAN);circ(0,-52,9,C.YELLOW);eye(-10,-20,W,4);eye(10,-20,W,4);return ctx.restore();
+    }
+
+    if(n==="Candy Destroyer"){
+        ell(0,9,34,23,"#4e1a59");circ(0,-18,31,"#7e1b9c");poly([[-27,-38],[-18,-66],[-3,-42]],"#a92bd0");poly([[27,-38],[18,-66],[3,-42]],"#a92bd0");circ(-11,-20,5,C.RED);circ(11,-20,5,C.RED);ctx.strokeStyle=C.RED;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,-3,12,0,Math.PI);ctx.stroke();return ctx.restore();
+    }
+
+    if(n==="Original Candy God"){
+        ell(0,8,35,24,"#c8a1ff");circ(0,-18,31,"#b37cff");poly([[-31,-34],[-19,-65],[-6,-45],[0,-67],[8,-45],[21,-65],[31,-34]],C.GOLD);eye(-11,-20,W,5);eye(11,-20,W,5);return ctx.restore();
+    }
+
+    if(n==="Original Void Dragon"){
+        ell(0,8,35,24,"#222234");circ(0,-18,31,"#141421");poly([[-29,-36],[-20,-70],[-4,-43]],Pu);poly([[29,-36],[20,-70],[4,-43]],Pu);eye(-11,-20,"#ff29c9",5);eye(11,-20,"#ff29c9",5);ctx.strokeStyle="#ff29c9";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(25,5);ctx.quadraticCurveTo(55,25,42,-6);ctx.stroke();return ctx.restore();
+    }
+
+    if(n==="Original Rainbow God"){
+        ell(0,8,35,24,"#f4f4ff");for(const [r,c] of[[34,R],[28,O],[22,Y],[16,G],[10,B]])circ(0,-18,r,c);poly([[-31,-34],[-19,-65],[-5,-43],[0,-67],[8,-43],[21,-65],[31,-34]],C.GOLD);eye(-11,-20,W,5);eye(11,-20,W,5);return ctx.restore();
+    }
+
+    if(n==="Ghost Candy"){
+        ctx.fillStyle="#e8e7f4";ctx.beginPath();ctx.moveTo(-30,20);ctx.arc(0,-14,30,Math.PI,0);ctx.lineTo(30,20);ctx.lineTo(15,8);ctx.lineTo(0,20);ctx.lineTo(-15,8);ctx.closePath();ctx.fill();eye(-10,-17,Pu,5);eye(10,-17,Pu,5);return ctx.restore();
+    }
+
+    if(n==="Glitched Cookie"){
+        rect(-31,-38,62,62,"#d0a067",10);rect(-36,-23,18,7,C.CYAN,2);rect(18,-7,18,7,P,2);rect(-17,8,22,6,C.RED,2);circ(-12,-18,4,DB);circ(11,-2,4,DB);return ctx.restore();
+    }
+
+    if(n==="Shadow Lollipop"){
+        ell(0,9,30,21,"#22222e");circ(0,-18,29,"#181820");ctx.strokeStyle=Pu;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,-18,26,0,Math.PI*2);ctx.stroke();rect(-4,8,8,35,"#555565",3);circ(-10,-20,4,R);circ(10,-20,4,R);return ctx.restore();
+    }
+
+    /* Remaining pets are deliberately different by creature type. */
+    if(n.includes("Phoenix")){
+        ell(0,8,31,22,O);poly([[-20,9],[-52,-27],[-13,-5]],R);poly([[20,9],[52,-27],[13,-5]],R);circ(0,-16,26,Y);eye(-9,-20,W,4);eye(9,-20,W,4);poly([[-12,20],[0,48],[12,20]],R);return ctx.restore();
+    }
+    if(n.includes("Bunny")){
+        ell(0,8,27,20,P);ell(-11,-35,9,25,P);ell(11,-35,9,25,P);circ(-9,-10,4,W);circ(9,-10,4,W);circ(0,-2,4,R);return ctx.restore();
+    }
+    if(n.includes("Wolf")){
+        ell(0,9,32,23,"#aebbd0");circ(0,-18,28,"#d9e2ee");poly([[-24,-36],[-14,-66],[-3,-42]],"#97a8bc");poly([[24,-36],[14,-66],[3,-42]],"#97a8bc");eye(-10,-20,R,4);eye(10,-20,R,4);poly([[-17,-7],[-5,4],[-21,5]],W);poly([[17,-7],[5,4],[21,5]],W);return ctx.restore();
+    }
+    if(n.includes("Cat")){
+        ell(0,8,30,22,"#666273");circ(0,-18,27,"#827b8b");poly([[-23,-36],[-14,-61],[-3,-40]],"#716a7d");poly([[23,-36],[14,-61],[3,-40]],"#716a7d");eye(-9,-20,Y,4);eye(9,-20,Y,4);circ(0,-9,3,P);return ctx.restore();
+    }
+    if(n.includes("Fox")){
+        ell(0,8,29,21,"#b96935");circ(0,-18,26,"#d8904f");poly([[-23,-36],[-14,-62],[-3,-40]],DB);poly([[23,-36],[14,-62],[3,-40]],DB);eye(-9,-20,Y,4);eye(9,-20,Y,4);return ctx.restore();
+    }
+    if(n.includes("Mouse")){
+        ell(0,8,26,19,Pu);circ(-16,-19,12,"#b789dc");circ(16,-19,12,"#b789dc");eye(-8,-6);eye(8,-6);line(23,9,42,18,P,3);return ctx.restore();
+    }
+    if(n.includes("Bird")){
+        ell(0,9,26,20,B);circ(0,-17,22,P);poly([[18,-3],[40,2],[18,8]],Y);poly([[-15,0],[-41,-20],[-25,13]],"#e77eb2");eye(-7,-16);eye(7,-16);return ctx.restore();
+    }
+    if(n.includes("Puppy")){
+        ell(0,9,30,22,"#bf7b44");circ(0,-18,26,"#d59455");ell(-22,-16,10,17,"#8b512d",-.3);ell(22,-16,10,17,"#8b512d",.3);eye(-9,-19);eye(9,-19);circ(0,-6,6,D);return ctx.restore();
+    }
+    if(n.includes("Cookie")){
+        ell(0,8,30,22,"#b9783d");circ(0,-18,26,"#d9a05e");circ(-14,-4,4,DB);circ(13,-1,4,DB);circ(0,6,4,DB);eye(-9,-20);eye(9,-20);return ctx.restore();
+    }
+    if(n.includes("Candy")){
+        ell(0,8,30,22,P);circ(0,-18,26,P);ctx.strokeStyle=W;ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,-18,15,.3,2.4);ctx.stroke();eye(-9,-20);eye(9,-20);return ctx.restore();
+    }
+    if(n.includes("Sugar")){
+        ell(0,8,28,21,"#f4dbff");circ(-10,-18,9,P);circ(10,-18,9,C.CYAN);eye(-8,-2,Pu,3);eye(8,-2,Pu,3);return ctx.restore();
+    }
+    const rc=RARITY_COLORS[p.rarity]||Pu;
+    ell(0,8,29,21,rc);circ(0,-18,25,rc);eye(-9,-19);eye(9,-19);return ctx.restore();
+}
+
+function drawEnemy(ctx,e){
+    const x=e.x,y=e.y,r=e.radius;
+    if(e.boss||e.type==="final_boss")drawBoss(ctx,e);else if(e.type==="broccoli"){ctx.fillStyle=C.DARK_GREEN;ctx.fillRect(x-9,y+10,18,55);ctx.fillStyle=C.GREEN;ctx.beginPath();ctx.arc(x-15,y,18,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+15,y,18,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x,y-15,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.BLACK;ctx.beginPath();ctx.arc(x-9,y-2,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+9,y-2,4,0,Math.PI*2);ctx.fill();}
+    else{ctx.fillStyle=C.BROWN;ctx.beginPath();ctx.roundRect(x-30,y-21,60,42,9);ctx.fill();ctx.fillStyle="#b96432";ctx.beginPath();ctx.roundRect(x-24,y-15,48,30,6);ctx.strokeStyle="#b96432";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle=C.DARK_BROWN;ctx.beginPath();ctx.arc(x-13,y-6,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+13,y+7,5,0,Math.PI*2);ctx.fill();}
+    const bw=e.type==="final_boss"?300:r*2.2,bh=e.type==="final_boss"?14:7,ratio=Math.max(0,e.health/e.maxHealth);ctx.fillStyle=C.DARK_RED;ctx.fillRect(x-bw/2,y-r-(e.type==="final_boss"?22:18),bw,bh);ctx.fillStyle=e.type==="final_boss"?C.RED:C.RED;ctx.fillRect(x-bw/2,y-r-(e.type==="final_boss"?22:18),bw*ratio,bh);ctx.font=e.type==="final_boss"?"24px Arial":"17px Arial";ctx.textAlign="center";ctx.fillStyle=e.type==="final_boss"?C.RED:C.YELLOW;if(e.boss)ctx.fillText(e.type==="final_boss"?"FINAL BOSS":e.name,x,y-r-30);
+}
+function drawBoss(ctx,e){
+    const x=e.x,y=e.y,r=e.radius,w=waveState.wave;
+    if(e.type==="final_boss"){ctx.fillStyle="#2d1238";ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.PINK;ctx.lineWidth=6;ctx.beginPath();ctx.arc(x,y,r+8,0,Math.PI*2);ctx.stroke();ctx.fillStyle=C.RED;ctx.beginPath();ctx.moveTo(x-45,y-50);ctx.lineTo(x-30,y-95);ctx.lineTo(x-12,y-55);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+45,y-50);ctx.lineTo(x+30,y-95);ctx.lineTo(x+12,y-55);ctx.closePath();ctx.fill();ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.moveTo(x-38,y-65);ctx.lineTo(x-25,y-95);ctx.lineTo(x-8,y-72);ctx.lineTo(x,y-102);ctx.lineTo(x+12,y-72);ctx.lineTo(x+28,y-95);ctx.lineTo(x+40,y-65);ctx.closePath();ctx.fill();ctx.fillStyle=C.YELLOW;ctx.beginPath();ctx.arc(x-20,y-12,10,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+20,y-12,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.BLACK;ctx.beginPath();ctx.arc(x-20,y-12,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+20,y-12,4,0,Math.PI*2);ctx.fill();return;}
+    if(w===5){ctx.fillStyle=C.DARK_GREEN;ctx.fillRect(x-12,y+20,24,70);for(const [ox,oy,rr]of[[-35,5,30],[35,5,30],[0,-25,38]]){ctx.fillStyle=C.GREEN;ctx.beginPath();ctx.arc(x+ox,y+oy,rr,0,Math.PI*2);ctx.fill();}ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.moveTo(x-27,y-60);ctx.lineTo(x-15,y-84);ctx.lineTo(x,y-65);ctx.lineTo(x+15,y-84);ctx.lineTo(x+27,y-60);ctx.closePath();ctx.fill();}
+    else if(w===10||w===25){ctx.fillStyle=w===10?C.BROWN:C.GOLD;ctx.beginPath();ctx.ellipse(x,y,70,50,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.DARK_BROWN;ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(x,y,55,40,0,0,Math.PI*2);ctx.stroke();ctx.fillStyle=C.BLACK;ctx.beginPath();ctx.arc(x-22,y-10,7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+22,y-10,7,0,Math.PI*2);ctx.fill();}
+    else {ctx.fillStyle=e.color||C.PINK;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(x-22,y-20,10,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+22,y-20,10,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.BLACK;ctx.beginPath();ctx.arc(x-22,y-20,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+22,y-20,5,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=C.BLACK;ctx.beginPath();ctx.arc(x-r*.28,y-8,5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x+r*.28,y-8,5,0,Math.PI*2);ctx.fill();
+}
+function setupJoystick(){const b=document.getElementById("joy"),k=document.getElementById("joyKnob");if(!b||!k)return;function move(e){if(!joystick.active)return;const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,m=45,len=Math.hypot(dx,dy);if(len>m){dx=dx/len*m;dy=dy/len*m;}joystick.x=dx/m;joystick.y=dy/m;k.style.transform=`translate(${dx}px,${dy}px)`;}b.addEventListener("pointerdown",e=>{joystick.active=true;b.setPointerCapture?.(e.pointerId);move(e)});b.addEventListener("pointermove",move);for(const ev of["pointerup","pointercancel"]){b.addEventListener(ev,()=>{joystick.active=false;joystick.x=0;joystick.y=0;k.style.transform="";});}}
+function setKey(e,on){keys[e.key.toLowerCase()]=on;if(e.code==="Space"&&on){if(currentMode==="waves")waveAttack();}}
+window.addEventListener("keydown",e=>setKey(e,true));window.addEventListener("keyup",e=>setKey(e,false));
+
+// ================================================================
+// CARD BATTLE — SEPARATE GAME MODE
+// ================================================================
+function battlePage(){
+    currentMode="battleMenu";
+    const owned=CANDY_CARDS.filter(c=>Number(save.cards_owned[c[0]]||0)>0);
+    render(`${topbar()}<div class="section"><h1>CARD BATTLE</h1><div class="panel center"><h2>USE YOUR COLLECTED CANDY CARDS</h2><p>Card battle is a separate mode from SOLO WAVES and MULTIPLAYER.</p><p>Equipped card: <b>${esc(save.equipped_card||"NONE")}</b> • Equipped pet: <b>${esc(save.equipped_pet||"NONE")}</b></p><div class="skill-row"><button class="blue" onclick="beginCardBattle()">START BATTLE</button><button onclick="cardsPage()">CHOOSE CARD</button></div>${owned.length?"":"<div class='notice'>OPEN A PACK FIRST TO GET CARDS.</div>"}</div><div class="panel"><h2>CARD FORMAT</h2><p>Each card has DAMAGE in the top-left, HP in the top-right, artwork in the middle, then the name and rarity at the bottom.</p></div></div>`);
+}
+function battleStats(name){const c=card(name),r=c[1],mult={Common:1,Uncommon:1.15,Rare:1.35,Epic:1.6,Legendary:1.9,Mythic:2.3,Secret:2.7,Exotic:3.2,OP:4,OC:5}[r],copies=Math.max(1,Number(save.cards_owned[name]||1)),p=pet(save.equipped_pet);return{name,rarity:r,damage:Math.round(20*mult+Math.min(copies,10))+Number(p?.damage||0),hp:Math.round(70+mult*35+Math.min(copies,10)*3+Number(p?.damage||0)*2),pet:p};}
+function beginCardBattle(opponent="Candy Bot"){
+    if(!save.equipped_card){const first=CANDY_CARDS.find(c=>Number(save.cards_owned[c[0]]||0)>0);if(!first)return toast("OPEN A PACK FIRST!");save.equipped_card=first[0];saveGame();}
+    const mine=battleStats(save.equipped_card), oc=randomCard(), enemy={name:oc[0],rarity:oc[1],damage:Math.round(20*({Common:1,Uncommon:1.15,Rare:1.35,Epic:1.6,Legendary:1.9,Mythic:2.3,Secret:2.7,Exotic:3.2,OP:4,OC:5}[oc[1]])+Math.random()*10),hp:Math.round(70+({Common:1,Uncommon:1.15,Rare:1.35,Epic:1.6,Legendary:1.9,Mythic:2.3,Secret:2.7,Exotic:3.2,OP:4,OC:5}[oc[1]])*35)};
+    cardBattle={opponent,mine,enemy,myHp:mine.hp,enemyHp:enemy.hp,log:["BATTLE STARTED!",`${mine.name} VS ${enemy.name}`],over:false};drawCardBattle();
+}
+function drawCardBattle(){const b=cardBattle;currentMode="battle";render(`${topbar()}<div class="section"><h1>CARD BATTLE</h1><div class="battle-arena"><div class="battle-side left"><b>${esc(save.username)}</b><div class="battle-card" style="border-color:${RARITY_COLORS[b.mine.rarity]}"><div class="battle-stats"><span>DAMAGE ${b.mine.damage}</span><span>HP ${Math.max(0,Math.round(b.myHp))}</span></div><canvas id="mineBattle" width="190" height="155"></canvas><b>${esc(b.mine.name)}</b><div style="color:${RARITY_COLORS[b.mine.rarity]};font-weight:900;margin-top:4px">${b.mine.rarity}</div></div><div class="hpbox"><div style="width:${Math.max(0,b.myHp/b.mine.hp*100)}%"></div></div></div><div class="vs">VS</div><div class="battle-side right"><b>${esc(b.opponent)}</b><div class="battle-card" style="border-color:${RARITY_COLORS[b.enemy.rarity]}"><div class="battle-stats"><span>DAMAGE ${b.enemy.damage}</span><span>HP ${Math.max(0,Math.round(b.enemyHp))}</span></div><canvas id="enemyBattle" width="190" height="155"></canvas><b>${esc(b.enemy.name)}</b><div style="color:${RARITY_COLORS[b.enemy.rarity]};font-weight:900;margin-top:4px">${b.enemy.rarity}</div></div><div class="hpbox"><div style="width:${Math.max(0,b.enemyHp/b.enemy.hp*100)}%"></div></div></div></div><div class="battle-actions"><button class="red" onclick="battleHit('strike')">STRIKE</button><button class="gold" onclick="battleHit('power')">POWER ATTACK</button><button class="blue" onclick="battleHit('pet')">PET SKILL</button><button class="gray" onclick="battlePage()">LEAVE</button></div><div class="log">${b.log.slice(-6).map(esc).map(x=>`<div>${x}</div>`).join("")}</div></div>`);paintBattleCanvas();}
+function paintBattleCanvas(){if(!cardBattle)return;const a=document.getElementById("mineBattle"),e=document.getElementById("enemyBattle");if(a)drawCardArt(a.getContext("2d"),cardBattle.mine.name,a.width,a.height);if(e)drawCardArt(e.getContext("2d"),cardBattle.enemy.name,e.width,e.height);}
+function battleHit(kind){if(!cardBattle||cardBattle.over)return;let damage=cardBattle.mine.damage;if(kind==="power")damage=Math.round(damage*1.65);if(kind==="pet")damage+=cardBattle.mine.pet?Number(cardBattle.mine.pet.damage)*2+8:5;cardBattle.enemyHp-=damage;cardBattle.log.push(`${save.username} used ${kind.toUpperCase()} for ${damage} damage!`);if(cardBattle.enemyHp<=0)return finishCardBattle(true);const ed=Math.max(1,Math.round(cardBattle.enemy.damage*(.85+Math.random()*.35)));cardBattle.myHp-=ed;cardBattle.log.push(`${cardBattle.opponent} attacked for ${ed} damage!`);if(cardBattle.myHp<=0)return finishCardBattle(false);drawCardBattle();}
+function finishCardBattle(won){cardBattle.over=true;if(won){save.wins++;save.trophies+=25;save.candy_credits+=15;cardBattle.log.push("YOU WIN! +25 TROPHIES +15 CANDY");}else{save.losses++;save.trophies=Math.max(0,save.trophies-15);cardBattle.log.push("YOU LOST! -15 TROPHIES");}saveGame();drawCardBattle();setTimeout(()=>{alert(won?"YOU WIN!\n+25 TROPHIES\n+15 CANDY":"YOU LOST!\n-15 TROPHIES");battlePage();},350);}
+
+// ================================================================
+// MULTIPLAYER — SEPARATE PAGE AND CONNECTION
+// ================================================================
+function multiplayerPage(){
+    currentMode="multiplayer";
+    render(`${topbar()}<div class="section"><h1>MULTIPLAYER</h1><div class="panel center"><h2>ONLINE MULTIPLAYER</h2><p>Multiplayer is its own menu. It does not automatically enter SOLO WAVES or CARD BATTLE.</p><div class="form"><input id="multiName" maxlength="18" value="${esc(save.username)}" placeholder="PLAYER NAME"><input id="roomInput" maxlength="12" placeholder="ROOM CODE"></div><br><div class="skill-row"><button class="green" onclick="createMultiplayerRoom()">CREATE ROOM</button><button class="blue" onclick="joinMultiplayerRoom()">JOIN ROOM</button><button class="gray" onclick="findMultiplayerMatch()">FIND PLAYER</button></div><div id="netState" class="notice">SERVER NOT CONNECTED</div></div><div class="multi-grid"><div class="panel"><h2>YOUR MULTIPLAYER CARD</h2><p>${esc(save.equipped_card||"NONE")}</p><p>Pet: ${esc(save.equipped_pet||"NONE")}</p></div><div class="panel"><h2>ROOM</h2><p id="roomLabel">${multiRoom||"NONE"}</p><p>Share the room code with the other player.</p></div></div></div>`);
+}
+function setNet(text){const x=document.getElementById("netState");if(x)x.textContent=text;}
+function socketUrl(){const proto=location.protocol==="https:"?"wss":"ws";return `${proto}://${location.host}`;}
+function connectSocket(){if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;try{socket=new WebSocket(socketUrl());socket.onopen=()=>setNet("CONNECTED TO SERVER");socket.onclose=()=>setNet("SERVER DISCONNECTED");socket.onerror=()=>setNet("SERVER CONNECTION ERROR");socket.onmessage=e=>handleMultiMessage(e.data);}catch{setNet("WEBSOCKET NOT AVAILABLE");}}
+function sendMulti(obj){if(!socket||socket.readyState!==WebSocket.OPEN){setNet("NO SERVER CONNECTION");return false;}socket.send(JSON.stringify(obj));return true;}
+function multiPlayerData(){return{username:save.username,card:save.equipped_card,pet:save.equipped_pet,trophies:save.trophies};}
+function createMultiplayerRoom(){save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"create_room",username:save.username,player:multiPlayerData()}),250);}
+function joinMultiplayerRoom(){save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";const code=document.getElementById("roomInput")?.value.trim().toUpperCase();if(!code)return toast("ENTER A ROOM CODE!");saveGame();connectSocket();setTimeout(()=>sendMulti({type:"join_room",room:code,roomCode:code,username:save.username,player:multiPlayerData()}),250);}
+function findMultiplayerMatch(){save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"matchmake",username:save.username,player:multiPlayerData()}),250);}
+function handleMultiMessage(raw){let m;try{m=JSON.parse(raw)}catch{setNet(raw);return;}
+    if(m.type==="connected"){setNet(m.message||"CONNECTED TO SERVER");return;}
+    if(m.type==="room_created"){multiRoom=m.room||m.roomCode||m.code||"";setNet("ROOM CREATED: "+multiRoom);const i=document.getElementById("roomInput");if(i)i.value=multiRoom;return;}
+    if(m.type==="room_joined"){multiRoom=m.room||m.roomCode||multiRoom;setNet("ROOM JOINED — WAITING FOR PLAYER");return;}
+    if(m.type==="opponent_joined"){setNet("OTHER PLAYER JOINED — STARTING...");return;}
+    if(m.type==="matchmaking"){setNet(m.message||"SEARCHING FOR PLAYER...");return;}
+    if(m.type==="match_found"){multiRoom=m.room||multiRoom;setNet("PLAYER FOUND — STARTING BATTLE...");return;}
+    if(m.type==="multiplayer_battle_start"){beginOnlineBattle(m);return;}
+    if(m.type==="multiplayer_battle_state"){updateOnlineBattle(m);return;}
+    if(m.type==="battle_result"){finishOnlineBattle(m);return;}
+    if(m.type==="opponent_left"){setNet("OPPONENT LEFT");alert(m.message||"Opponent disconnected.");multiplayerPage();return;}
+    if(m.type==="error")return setNet("SERVER ERROR: "+(m.message||"UNKNOWN"));
+    setNet(m.message||m.type||"SERVER MESSAGE");}
+
+
+// ================================================================
+// ONLINE MULTIPLAYER BATTLE STATE
+// ================================================================
+let onlineBattle=null;
+function beginOnlineBattle(msg){
+    const meId=msg.you;
+    const mine=(msg.state||[]).find(x=>x.id===meId);
+    const opp=(msg.state||[]).find(x=>x.id!==meId)||msg.opponent;
+    onlineBattle={room:msg.room,you:meId,mine,opponent:opp,turnPlayerId:msg.turnPlayerId||null,log:["ONLINE BATTLE STARTED!"],over:false};
+    drawOnlineBattle();
+}
+function updateOnlineBattle(msg){
+    if(!onlineBattle)return;
+    const state=msg.state||[];
+    onlineBattle.turnPlayerId=msg.turnPlayerId||null;
+    onlineBattle.mine=state.find(x=>x.id===onlineBattle.you)||onlineBattle.mine;
+    onlineBattle.opponent=state.find(x=>x.id!==onlineBattle.you)||onlineBattle.opponent;
+    onlineBattle.log.push(msg.log||"TURN UPDATED");
+    drawOnlineBattle();
+}
+function drawOnlineBattle(){
+    if(!onlineBattle)return;
+    currentMode="multiplayerBattle";
+    const b=onlineBattle;
+    const myCardName=b.mine.card||save.equipped_card||"Red Lollipop";
+    const myCard=card(myCardName),oppCardName=b.opponent?.card||"Green Broccoli",oppCard=card(oppCardName);
+    render(`${topbar()}<div class="section"><h1>ONLINE MULTIPLAYER BATTLE</h1><div class="battle-arena"><div class="battle-side left"><b>${esc(b.mine.username||save.username)}</b><div class="battle-card" style="border-color:${RARITY_COLORS[myCard[1]]}"><div class="battle-stats"><span>ONLINE</span><span>HP ${Math.round(b.mine.hp)}</span></div><canvas id="onlineMine" width="190" height="155"></canvas><b>${esc(myCardName)}</b><div style="color:${RARITY_COLORS[myCard[1]]};font-weight:900">${myCard[1]}</div></div><div class="hpbox"><div style="width:${Math.max(0,b.mine.hp/b.mine.maxHp*100)}%"></div></div></div><div class="vs">VS</div><div class="battle-side right"><b>${esc(b.opponent?.username||"Online Player")}</b><div class="battle-card" style="border-color:${RARITY_COLORS[oppCard[1]]}"><div class="battle-stats"><span>ONLINE</span><span>HP ${Math.round(b.opponent?.hp||0)}</span></div><canvas id="onlineOpp" width="190" height="155"></canvas><b>${esc(oppCardName)}</b><div style="color:${RARITY_COLORS[oppCard[1]]};font-weight:900">${oppCard[1]}</div></div><div class="hpbox"><div style="width:${Math.max(0,(b.opponent?.hp||0)/(b.opponent?.maxHp||100)*100)}%"></div></div></div></div><div class="battle-actions"><button class="red" onclick="sendOnlineBattleAction('strike')" ${b.turnPlayerId===b.you&&b.mine.hp>0?"":"disabled"}>STRIKE</button><button class="gold" onclick="sendOnlineBattleAction('power')" ${b.turnPlayerId===b.you&&b.mine.hp>0?"":"disabled"}>POWER ATTACK</button><button class="blue" onclick="sendOnlineBattleAction('pet')" ${b.turnPlayerId===b.you&&b.mine.hp>0?"":"disabled"}>PET SKILL</button><button class="gray" onclick="leaveOnlineBattle()">LEAVE</button></div><div class="log"><div>ROOM: ${esc(b.room||"NONE")}</div>${b.log.slice(-6).map(x=>`<div>${esc(x)}</div>`).join("")}</div></div>`);
+    const a=document.getElementById("onlineMine"),o=document.getElementById("onlineOpp");if(a)drawCardArt(a.getContext("2d"),myCardName,a.width,a.height);if(o)drawCardArt(o.getContext("2d"),oppCardName,o.width,o.height);
+}
+function sendOnlineBattleAction(action){
+    if(!onlineBattle||!socket)return;
+    if(onlineBattle.turnPlayerId!==onlineBattle.you)return toast("WAIT FOR YOUR TURN!");
+    if(!sendMulti({type:"battle_action",room:onlineBattle.room,action}))toast("NOT CONNECTED!");
+}
+function finishOnlineBattle(msg){
+    if(!onlineBattle)return;
+    onlineBattle.over=true;
+    onlineBattle.log.push("BATTLE FINISHED: "+(msg.winner||"NO WINNER"));
+    setNet("BATTLE FINISHED");
+    const winner=msg.winner||"";
+    if(winner===save.username){save.wins++;save.trophies+=25;save.candy_credits+=15;}
+    else if(winner){save.losses++;save.trophies=Math.max(0,save.trophies-15);}
+    saveGame();
+    alert(winner===save.username?"YOU WIN! +25 TROPHIES +15 CANDY":"ONLINE BATTLE FINISHED");
+    onlineBattle=null;
+    multiplayerPage();
+}
+function leaveOnlineBattle(){sendMulti({type:"leave_room"});onlineBattle=null;multiplayerPage();}
+
+// ================================================================
+// RANK — SEPARATE FROM MULTIPLAYER UI
+// ================================================================
+function rankPage(){
+    currentMode="rank";const r=currentRank(),next=RANKS[Math.min(RANKS.length-1,RANKS.indexOf(r)+1)];const pct=RANKS.indexOf(r)===RANKS.length-1?100:Math.max(0,Math.min(100,(save.trophies-r.min)/Math.max(1,next.min-r.min)*100));
+    render(`${topbar()}<div class="section"><h1>BATTLE RANK</h1><div class="panel center"><h2>${r.name}</h2><p>${save.trophies} TROPHIES • ${save.wins} WINS • ${save.losses} LOSSES</p><div class="rank-progress"><div style="width:${pct}%"></div></div></div>${RANKS.map((x,i)=>`<div class="rank ${x.name===r.name?"current":""}"><div class="rank-badge">${x.name==="Candy Champion"?"👑":x.name[0]}</div><div><h2>${x.name}</h2><b>${x.min}${x.max<999999?" - "+x.max:"+"} trophies</b></div></div>`).join("")}<div class="panel center"><p>RANK IS TIED TO CARD BATTLES. SOLO WAVE PROGRESS AND MULTIPLAYER LOBBY STATUS DO NOT replace this page.</p></div></div>`);
+}
+
+// ================================================================
+// EXTRA MENU — NEW MODES ARE ADDED WITHOUT REPLACING OG PLAY
+// ================================================================
+function mainMenuExtras(){
+    const modal=document.createElement("div");modal.className="modal";modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button></div><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;document.body.appendChild(modal);}
+
+// Add a small "new modes" control without changing the original four OG buttons.
+// It is positioned at the bottom-left so DEVICE remains in the corner.
+const oldMenu=menu;
+menu=function(){
+    oldMenu();
+    const host=document.querySelector('.canvas-page');
+    const b=document.createElement('button');b.textContent='NEW MODES';b.className='gray';Object.assign(b.style,{position:'absolute',left:'20px',top:'18px',fontSize:'14px',padding:'9px 13px'});b.onclick=mainMenuExtras;host.appendChild(b);
+};
+
+// ================================================================
+// START
+// ================================================================
+menu();
+</script>
+</body>
+</html>
