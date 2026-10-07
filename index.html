@@ -20,6 +20,10 @@ button.gold{background:#c59a24}
 button.red{background:var(--red)}
 button.gray{background:#45444f}
 button.small{font-size:16px;padding:7px 12px}
+
+.language-corner{position:absolute;right:20px;top:65px;z-index:30}
+.language-select{background:#45444f;color:#fff;border:2px solid #fff;border-radius:10px;padding:7px 10px;font-weight:700;font-size:15px}
+@media(max-width:650px){.language-corner{right:14px;top:64px}.language-select{font-size:13px}}
 #app{width:100%;height:100%}
 .page{width:100%;height:100%;overflow:auto;background:var(--dark-bg)}
 .canvas-page{width:100%;height:100%;position:relative;background:#191428;overflow:hidden}
@@ -36,6 +40,7 @@ canvas.game{display:block;width:100%;height:100%;touch-action:none}
 .og-buttons{position:absolute;left:50%;top:350px;transform:translateX(-50%);width:min(300px,72vw);display:flex;flex-direction:column;gap:15px}
 .og-buttons button{height:55px}
 .og-info{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);color:#d4d0dc;font-size:18px;text-align:center;white-space:nowrap}
+.lang-top .language-select{font-size:13px;padding:6px 8px}
 .topbar{height:78px;display:flex;align-items:center;gap:10px;padding:12px;background:#14121d;border-bottom:2px solid #4b3b59;position:sticky;top:0;z-index:20}
 .topbar .spacer{flex:1}
 .pill{background:#201c29;border:2px solid #4a4055;border-radius:10px;padding:9px 12px;font-weight:900}
@@ -307,8 +312,117 @@ function sanitize(){for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(0
 sanitize();
 if(!save.equipped_pet && localStorage.getItem("equipped_pet")) save.equipped_pet=localStorage.getItem("equipped_pet");
 
-function render(html){document.getElementById("app").innerHTML=html;}
-function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/50</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div></div>`;}
+const LANGUAGES = {
+    en:{name:"English", strings:{}},
+    es:{name:"Español", strings:{
+        "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"PIRULETA VS COMIDA","CANDY CARDS + PETS":"CARTAS DE CARAMELOS + MASCOTAS",
+        "PLAY":"JUGAR","CARDS":"CARTAS","PETS":"MASCOTAS","SKINS":"ASPECTOS","BATTLE":"BATALLA","MULTIPLAYER":"MULTIJUGADOR","RANK":"RANGO","HOW TO PLAY":"CÓMO JUGAR",
+        "CANDY SHOP":"TIENDA DE CARAMELOS","SETTINGS":"AJUSTES","CREDITS":"CRÉDITOS","BACK":"ATRÁS","MENU":"MENÚ","CONTINUE":"CONTINUAR",
+        "OPEN PACK — 10 CANDY":"ABRIR PAQUETE — 10 CARAMELOS","CANDY CARDS":"CARTAS DE CARAMELOS","CARD BATTLE":"BATALLA DE CARTAS","ONLINE MULTIPLAYER":"MULTIJUGADOR EN LÍNEA",
+        "CREATE ROOM":"CREAR SALA","JOIN ROOM":"UNIRSE A SALA","FIND PLAYER":"BUSCAR JUGADOR","START BATTLE":"INICIAR BATALLA","CHOOSE CARD":"ELEGIR CARTA",
+        "STRIKE":"GOLPE","POWER ATTACK":"ATAQUE PODEROSO","PET SKILL":"HABILIDAD DE MASCOTA","LEAVE":"SALIR","SHOP":"TIENDA","SKIN":"ASPECTO","ATTACK":"ATACAR",
+        "PLAYER NAME":"NOMBRE DEL JUGADOR","ROOM CODE":"CÓDIGO DE SALA","SAVE NAME":"GUARDAR NOMBRE","RESET SAVE":"RESTABLECER PARTIDA",
+        "WINS":"VICTORIAS","LOSSES":"DERROTAS","TROPHIES":"TROFEOS","WAVE":"OLEADA","CANDY":"CARAMELOS","DAMAGE":"DAÑO","HP":"VIDA",
+        "HEALTH +20!":"¡VIDA +20!","DAMAGE +5!":"¡DAÑO +5!","SPEED +0.5!":"¡VELOCIDAD +0.5!","RANGE +15!":"¡ALCANCE +15!",
+        "NOT ENOUGH CANDY!":"¡NO HAY SUFICIENTES CARAMELOS!","EQUIP":"EQUIPAR","EQUIPPED":"EQUIPADO","USED":"USADO",
+        "NORMAL WAVES":"OLEADAS NORMALES","WAVES":"OLEADAS","CANDY CARDS":"CARTAS DE CARAMELOS","PETS":"MASCOTAS","MULTIPLAYER":"MULTIJUGADOR","RANK":"RANGO",
+        "BATTLE RANK":"RANGO DE BATALLA","IRON":"HIERRO","BRONZE":"BRONCE","GOLD":"ORO","PLATINUM":"PLATINO","AMETHYST":"AMATISTA","CANDY CHAMPION":"CAMPEÓN DE CARAMELOS",
+        "YOU WIN!":"¡GANASTE!","YOU LOST!":"¡PERDISTE!","BATTLE STARTED!":"¡BATALLA INICIADA!","FINAL BOSS!":"¡JEFE FINAL!"
+    }},
+    fr:{name:"Français", strings:{
+        "DEVICE":"APPAREIL","LOLLIPOP VS FOOD":"LOLLIPOP CONTRE NOURRITURE","CANDY CARDS + PETS":"CARTES DE BONBONS + FAMILIERS",
+        "PLAY":"JOUER","CARDS":"CARTES","PETS":"FAMILIERS","SKINS":"APPARENCES","BATTLE":"COMBAT","MULTIPLAYER":"MULTIJOUEUR","RANK":"RANG","HOW TO PLAY":"COMMENT JOUER",
+        "CANDY SHOP":"BOUTIQUE DE BONBONS","SETTINGS":"PARAMÈTRES","CREDITS":"CRÉDITS","BACK":"RETOUR","MENU":"MENU","CONTINUE":"CONTINUER",
+        "OPEN PACK — 10 CANDY":"OUVRIR UN PAQUET — 10 BONBONS","CANDY CARDS":"CARTES DE BONBONS","CARD BATTLE":"COMBAT DE CARTES","ONLINE MULTIPLAYER":"MULTIJOUEUR EN LIGNE",
+        "CREATE ROOM":"CRÉER UNE SALLE","JOIN ROOM":"REJOINDRE UNE SALLE","FIND PLAYER":"CHERCHER UN JOUEUR","START BATTLE":"COMMENCER LE COMBAT","CHOOSE CARD":"CHOISIR UNE CARTE",
+        "STRIKE":"FRAPPE","POWER ATTACK":"ATTAQUE PUISSANTE","PET SKILL":"CAPACITÉ DU FAMILIER","LEAVE":"QUITTER","SHOP":"BOUTIQUE","SKIN":"APPARENCE","ATTACK":"ATTAQUER",
+        "PLAYER NAME":"NOM DU JOUEUR","ROOM CODE":"CODE DE SALLE","SAVE NAME":"ENREGISTRER LE NOM","RESET SAVE":"RÉINITIALISER LA PARTIE",
+        "WINS":"VICTOIRES","LOSSES":"DÉFAITES","TROPHIES":"TROPHÉES","WAVE":"VAGUE","CANDY":"BONBONS","DAMAGE":"DÉGÂTS","HP":"PV",
+        "HEALTH +20!":"PV +20 !","DAMAGE +5!":"DÉGÂTS +5 !","SPEED +0.5!":"VITESSE +0.5 !","RANGE +15!":"PORTÉE +15 !",
+        "NOT ENOUGH CANDY!":"PAS ASSEZ DE BONBONS !","EQUIP":"ÉQUIPER","EQUIPPED":"ÉQUIPÉ","USED":"UTILISÉ",
+        "BATTLE RANK":"RANG DE COMBAT","IRON":"FER","BRONZE":"BRONZE","GOLD":"OR","PLATINUM":"PLATINE","AMETHYST":"AMÉTHYSTE","CANDY CHAMPION":"CHAMPION DES BONBONS",
+        "YOU WIN!":"VICTOIRE !","YOU LOST!":"DÉFAITE !","BATTLE STARTED!":"COMBAT COMMENCÉ !","FINAL BOSS!":"BOSS FINAL !"
+    }},
+    de:{name:"Deutsch", strings:{
+        "DEVICE":"GERÄT","LOLLIPOP VS FOOD":"LOLLIPOP GEGEN ESSEN","CANDY CARDS + PETS":"BONBONKARTEN + HAUSTIERE",
+        "PLAY":"SPIELEN","CARDS":"KARTEN","PETS":"HAUSTIERE","SKINS":"SKINS","BATTLE":"KAMPF","MULTIPLAYER":"MEHRSPIELER","RANK":"RANG","HOW TO PLAY":"SPIELANLEITUNG",
+        "CANDY SHOP":"BONBON-SHOP","SETTINGS":"EINSTELLUNGEN","CREDITS":"CREDITS","BACK":"ZURÜCK","MENU":"MENÜ","CONTINUE":"WEITER",
+        "OPEN PACK — 10 CANDY":"PAKET ÖFFNEN — 10 BONBONS","CANDY CARDS":"BONBONKARTEN","CARD BATTLE":"KARTENKAMPF","ONLINE MULTIPLAYER":"ONLINE-MEHRSPIELER",
+        "CREATE ROOM":"RAUM ERSTELLEN","JOIN ROOM":"RAUM BEITRETEN","FIND PLAYER":"SPIELER SUCHEN","START BATTLE":"KAMPF STARTEN","CHOOSE CARD":"KARTE WÄHLEN",
+        "STRIKE":"SCHLAG","POWER ATTACK":"POWER-ANGRIFF","PET SKILL":"HAUSTIER-FÄHIGKEIT","LEAVE":"VERLASSEN","SHOP":"SHOP","SKIN":"SKIN","ATTACK":"ANGRIFF",
+        "PLAYER NAME":"SPIELERNAME","ROOM CODE":"RAUMCODE","SAVE NAME":"NAMEN SPEICHERN","RESET SAVE":"SPIELSTAND ZURÜCKSETZEN",
+        "WINS":"SIEGE","LOSSES":"NIEDERLAGEN","TROPHIES":"TROPHÄEN","WAVE":"WELLE","CANDY":"BONBONS","DAMAGE":"SCHADEN","HP":"LP",
+        "HEALTH +20!":"LP +20!","DAMAGE +5!":"SCHADEN +5!","SPEED +0.5!":"GESCHWINDIGKEIT +0.5!","RANGE +15!":"REICHWEITE +15!",
+        "NOT ENOUGH CANDY!":"NICHT GENUG BONBONS!","EQUIP":"AUSRÜSTEN","EQUIPPED":"AUSGERÜSTET","USED":"VERWENDET",
+        "BATTLE RANK":"KAMPFRANG","IRON":"EISEN","BRONZE":"BRONZE","GOLD":"GOLD","PLATINUM":"PLATIN","AMETHYST":"AMETHYST","CANDY CHAMPION":"BONBON-CHAMPION",
+        "YOU WIN!":"DU GEWINNST!","YOU LOST!":"DU VERLIERST!","BATTLE STARTED!":"KAMPF GESTARTET!","FINAL BOSS!":"END-BOSS!"
+    }},
+    pt:{name:"Português", strings:{
+        "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"PIRULITO VS COMIDA","CANDY CARDS + PETS":"CARTAS DE DOCES + PETS",
+        "PLAY":"JOGAR","CARDS":"CARTAS","PETS":"PETS","SKINS":"SKINS","BATTLE":"BATALHA","MULTIPLAYER":"MULTIJOGADOR","RANK":"RANK","HOW TO PLAY":"COMO JOGAR",
+        "CANDY SHOP":"LOJA DE DOCES","SETTINGS":"CONFIGURAÇÕES","CREDITS":"CRÉDITOS","BACK":"VOLTAR","MENU":"MENU","CONTINUE":"CONTINUAR",
+        "OPEN PACK — 10 CANDY":"ABRIR PACOTE — 10 DOCES","CANDY CARDS":"CARTAS DE DOCES","CARD BATTLE":"BATALHA DE CARTAS","ONLINE MULTIPLAYER":"MULTIJOGADOR ONLINE",
+        "CREATE ROOM":"CRIAR SALA","JOIN ROOM":"ENTRAR NA SALA","FIND PLAYER":"BUSCAR JOGADOR","START BATTLE":"INICIAR BATALHA","CHOOSE CARD":"ESCOLHER CARTA",
+        "STRIKE":"GOLPE","POWER ATTACK":"ATAQUE PODEROSO","PET SKILL":"HABILIDADE DO PET","LEAVE":"SAIR","SHOP":"LOJA","SKIN":"SKIN","ATTACK":"ATACAR",
+        "PLAYER NAME":"NOME DO JOGADOR","ROOM CODE":"CÓDIGO DA SALA","SAVE NAME":"SALVAR NOME","RESET SAVE":"REINICIAR PARTIDA",
+        "WINS":"VITÓRIAS","LOSSES":"DERROTAS","TROPHIES":"TROFÉUS","WAVE":"ONDA","CANDY":"DOCES","DAMAGE":"DANO","HP":"VIDA",
+        "HEALTH +20!":"VIDA +20!","DAMAGE +5!":"DANO +5!","SPEED +0.5!":"VELOCIDADE +0.5!","RANGE +15!":"ALCANCE +15!",
+        "NOT ENOUGH CANDY!":"DOCES INSUFICIENTES!","EQUIP":"EQUIPAR","EQUIPPED":"EQUIPADO","USED":"USADO",
+        "BATTLE RANK":"RANK DE BATALHA","IRON":"FERRO","BRONZE":"BRONZE","GOLD":"OURO","PLATINUM":"PLATINA","AMETHYST":"AMETISTA","CANDY CHAMPION":"CAMPEÃO DOS DOCES",
+        "YOU WIN!":"VOCÊ VENCEU!","YOU LOST!":"VOCÊ PERDEU!","BATTLE STARTED!":"BATALHA INICIADA!","FINAL BOSS!":"CHEFE FINAL!"
+    }},
+    it:{name:"Italiano", strings:{
+        "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"LECCA-LECCA CONTRO CIBO","CANDY CARDS + PETS":"CARTE DI CARAMELLE + ANIMALI",
+        "PLAY":"GIOCA","CARDS":"CARTE","PETS":"ANIMALI","SKINS":"SKIN","BATTLE":"BATTAGLIA","MULTIPLAYER":"MULTIGIOCATORE","RANK":"RANGO","HOW TO PLAY":"COME GIOCARE",
+        "CANDY SHOP":"NEGOZIO DI CARAMELLE","SETTINGS":"IMPOSTAZIONI","CREDITS":"CREDITI","BACK":"INDIETRO","MENU":"MENU","CONTINUE":"CONTINUA",
+        "OPEN PACK — 10 CANDY":"APRI PACCHETTO — 10 CARAMELLE","CANDY CARDS":"CARTE DI CARAMELLE","CARD BATTLE":"BATTAGLIA DI CARTE","ONLINE MULTIPLAYER":"MULTIGIOCATORE ONLINE",
+        "CREATE ROOM":"CREA STANZA","JOIN ROOM":"UNISCITI ALLA STANZA","FIND PLAYER":"CERCA GIOCATORE","START BATTLE":"INIZIA BATTAGLIA","CHOOSE CARD":"SCEGLI CARTA",
+        "STRIKE":"COLPO","POWER ATTACK":"ATTACCO POTENTE","PET SKILL":"ABILITÀ ANIMALE","LEAVE":"ESCI","SHOP":"NEGOZIO","SKIN":"SKIN","ATTACK":"ATTACCA",
+        "PLAYER NAME":"NOME GIOCATORE","ROOM CODE":"CODICE STANZA","SAVE NAME":"SALVA NOME","RESET SAVE":"REIMPOSTA PARTITA",
+        "WINS":"VITTORIE","LOSSES":"SCONFITTE","TROPHIES":"TROFEI","WAVE":"ONDATA","CANDY":"CARAMELLE","DAMAGE":"DANNI","HP":"PS",
+        "HEALTH +20!":"PS +20!","DAMAGE +5!":"DANNI +5!","SPEED +0.5!":"VELOCITÀ +0.5!","RANGE +15!":"PORTATA +15!",
+        "NOT ENOUGH CANDY!":"CARAMELLE INSUFFICIENTI!","EQUIP":"EQUIPAGGIA","EQUIPPED":"EQUIPAGGIATO","USED":"USATO",
+        "BATTLE RANK":"RANGO DI BATTAGLIA","IRON":"FERRO","BRONZE":"BRONZO","GOLD":"ORO","PLATINUM":"PLATINO","AMETHYST":"AMETISTA","CANDY CHAMPION":"CAMPIONE DELLE CARAMELLE",
+        "YOU WIN!":"HAI VINTO!","YOU LOST!":"HAI PERSO!","BATTLE STARTED!":"BATTAGLIA INIZIATA!","FINAL BOSS!":"BOSS FINALE!"
+    }}
+};
+let currentLanguage = localStorage.getItem("candyCardsLanguage") || "en";
+
+function translateHtml(html){
+    const lang = LANGUAGES[currentLanguage] || LANGUAGES.en;
+    let out = html;
+    const entries = Object.entries(lang.strings).sort((a,b)=>b[0].length-a[0].length);
+    for(const [from,to] of entries){
+        out = out.split(from).join(to);
+    }
+    return out;
+}
+
+function languageSelectorHtml(){
+    return `<select class="language-select" aria-label="Language" onchange="changeLanguage(this.value)">
+        ${Object.entries(LANGUAGES).map(([code,lang])=>`<option value="${code}" ${code===currentLanguage?"selected":""}>${lang.name}</option>`).join("")}
+    </select>`;
+}
+
+function addLanguageControlToMenu(html){
+    return html.replace('</button>\n        <div class="og-title">','</button>\n        <div class="language-corner">'+languageSelectorHtml()+'</div>\n        <div class="og-title">');
+}
+
+function changeLanguage(code){
+    if(!LANGUAGES[code]) return;
+    currentLanguage=code;
+    localStorage.setItem("candyCardsLanguage",code);
+    menu();
+}
+
+function render(html){
+    const translated = translateHtml(html);
+    document.getElementById("app").innerHTML=translated;
+    const root=document.getElementById("app");
+    root.querySelectorAll("[data-language-anchor]").forEach(x=>x.innerHTML=languageSelectorHtml());
+}
+
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/50</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
 
 // ================================================================
 // OG MAIN MENU — same important positions from main.py
@@ -317,6 +431,7 @@ function menu(){
     currentMode="menu";
     render(`<div class="canvas-page">
         <button class="gray og-device" onclick="devicePage()">DEVICE: ${detectDevice()}</button>
+        <div class="language-corner">${languageSelectorHtml()}</div>
         <div class="og-title">LOLLIPOP VS FOOD</div>
         <div class="og-subtitle">CANDY CARDS + PETS</div>
         <div class="og-lollipop"><div class="head"></div><div class="shine"></div><div class="stick"></div></div>
