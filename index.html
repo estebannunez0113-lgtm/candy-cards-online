@@ -39,6 +39,12 @@ canvas.game{display:block;width:100%;height:100%;touch-action:none}
 .topbar{height:78px;display:flex;align-items:center;gap:10px;padding:12px;background:#14121d;border-bottom:2px solid #4b3b59;position:sticky;top:0;z-index:20}
 .topbar .spacer{flex:1}
 .pill{background:#201c29;border:2px solid #4a4055;border-radius:10px;padding:9px 12px;font-weight:900}
+
+.howto-scroll{max-height:calc(100vh - 78px);overflow-y:auto;overflow-x:hidden;padding:0 8px 40px;scroll-behavior:smooth}
+.howto-scroll::-webkit-scrollbar{width:12px}
+.howto-scroll::-webkit-scrollbar-track{background:#110e17}
+.howto-scroll::-webkit-scrollbar-thumb{background:#6f5b7f;border-radius:8px;border:2px solid #110e17}
+.howto-scroll{scrollbar-width:auto;scrollbar-color:#6f5b7f #110e17}
 .section{width:min(1280px,96vw);margin:0 auto;padding:18px 0 40px}
 .section h1{font-size:46px;text-align:center;margin:6px 0 18px;text-shadow:0 3px 0 #000}
 .panel{background:#15121e;border:2px solid #413749;border-radius:14px;padding:15px;margin:12px 0}
@@ -319,11 +325,20 @@ function menu(){
             <button class="blue" onclick="cardsPage()">CARDS</button>
             <button class="purple" onclick="petsPage()">PETS</button>
             <button class="orange" onclick="skinsPage()">SKINS</button>
+            <button class="gray" onclick="howToPlayPage()">HOW TO PLAY</button>
         </div>
         <div class="og-info">Cards: ${countCards()}/${CANDY_CARDS.length} &nbsp;&nbsp; Pets: ${countPets()}/${PETS.length}</div>
     </div>`);
 }
 function detectDevice(){const w=innerWidth;return w<650?"PHONE":w<1000?"TABLET":"PC";}
+
+// ================================================================
+// HOW TO PLAY
+// ================================================================
+function howToPlayPage(){
+    currentMode="how-to-play";
+    render(`${topbar()}<div class="howto-scroll"><div class="section"><h1>HOW TO PLAY</h1><div class="panel"><h2>PLAY / SOLO WAVES</h2><p>Move your lollipop around the arena and attack the food enemies. Defeat every enemy to clear the wave.</p><p><b>PC:</b> Use WASD or the arrow keys to move. Press SPACE to attack.</p><p><b>PHONE / TABLET:</b> Use the touch joystick to move and the ATTACK button to attack.</p></div><div class="panel"><h2>WAVES</h2><p>Normal waves spawn broccoli and steak enemies. Every 5th wave has a boss. Boss waves are 5, 10, 15, 20, 25, 30, 35, 40, 45, and 50.</p><p>Wave 50 is <b>THE CANDY APOCALYPSE</b>.</p></div><div class="panel"><h2>CANDY CARDS</h2><p>Open packs for <b>2 cards + 1 pet</b>. Collected cards can be equipped for CARD BATTLE.</p></div><div class="panel"><h2>PETS</h2><p>Equip a pet from the PETS menu. Your equipped pet appears beside you during SOLO WAVES and gives its own bonuses.</p></div><div class="panel"><h2>CARD BATTLE</h2><p>Card Battle is separate from SOLO WAVES. Your card has DAMAGE at the top-left and HP at the top-right. Reduce the opponent card's HP to 0 to win.</p></div><div class="panel"><h2>MULTIPLAYER</h2><p>Multiplayer is a separate mode from Card Battle and Rank. Use the online room system to play with another player.</p></div><div class="panel"><h2>RANK</h2><p>Rank is separate from the wave game: Iron → Bronze → Gold → Platinum → Amethyst → Candy Champion.</p></div></div></div>`);
+}
 
 // ================================================================
 // DEVICE
@@ -451,7 +466,7 @@ function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>
 // ================================================================
 function shopPage(){
     currentMode="shop";
-    render(`${topbar()}<div class="section"><h1>CANDY SHOP</h1><div class="panel"><h2>PLAYER UPGRADES</h2><div class="skill-row"><button onclick="buyHealth()">HEALTH +20 — 10</button><button onclick="buyDamage()">DAMAGE +5 — 15</button><button onclick="buySpeed()">SPEED +0.5 — 20</button><button onclick="buyRange()">RANGE +15 — 20</button><button class="gold" onclick="openPack()">PACK — 10</button></div></div><div class="panel center">HP ${save.player_health}/${save.player_max_health} • Damage ${save.player_damage} • Speed ${save.player_speed} • Range ${save.player_attack_range}<br>Candy: ${save.candy_credits}</div></div>`);
+    render(`${topbar()}<div class="section"><h1>CANDY SHOP</h1><div class="panel"><h2>PLAYER UPGRADES</h2><div class="skill-row"><button onclick="buyHealth()">HEALTH +20 — 10</button><button onclick="buyDamage()">DAMAGE +5 — 15</button><button onclick="buySpeed()">SPEED +0.5 — 20</button><button onclick="buyRange()">RANGE +15 — 20</button><button class="gold" onclick="openPack()">PACK — 10</button></div></div><div class="panel center">HP ${save.player_health}/${save.player_max_health} • Damage ${save.player_damage} • Speed ${save.player_speed} • Range ${save.player_attack_range}<br>Candy: ${save.candy_credits}</div><div class="shop-continue"><button class="green" onclick="startWaves()">CONTINUE</button><button class="dark" onclick="menu()">MENU</button></div></div>`);
 }
 function buyHealth(){if(save.candy_credits<10)return toast("NOT ENOUGH CANDY!");save.candy_credits-=10;save.player_max_health+=20;save.player_health+=20;save.health_level++;sfxCollect();saveGame();toast("HEALTH +20!");shopPage();}
 function buyDamage(){if(save.candy_credits<15)return toast("NOT ENOUGH CANDY!");save.candy_credits-=15;save.player_damage+=5;save.damage_level++;sfxCollect();saveGame();toast("DAMAGE +5!");shopPage();}
