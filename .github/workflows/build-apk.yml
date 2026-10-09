@@ -1,6 +1,6 @@
 name: Candy Cards APK Build
 
-on: [push, workflow_dispatch]
+'on': [push, workflow_dispatch]
 
 jobs:
 test:
@@ -14,5 +14,5 @@ uses: actions/checkout@v4
     run: curl -fL https://candy-cards-online.onrender.com/ -o index.html
 
   - name: Confirm success
-    run: echo "Candy Cards website check passed!"
+    run: 'echo "Candy Cards website check passed!"'
 ```
