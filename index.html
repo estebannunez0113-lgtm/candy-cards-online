@@ -1136,7 +1136,7 @@ function setResponsiveWaveDimensions(){
     }
 }
 
-function startWaves(requestedWave=null){
+function startWaves(requestedWave=null, mode="waves"){
     let selectedWave;
     if(requestedWave!==null && requestedWave!==undefined){
         selectedWave=Math.floor(Number(requestedWave));
@@ -1149,7 +1149,7 @@ function startWaves(requestedWave=null){
         selectedWave=Math.max(1,Math.min(MAX_WAVES,Number(save.current_wave)||1));
     }
     setResponsiveWaveDimensions();
-    currentMode="waves";
+    currentMode=mode;
     ensureAudio();
 
     /* A previous Game Over saves HP at 0. Starting any allowed wave must revive the player. */
@@ -1161,14 +1161,24 @@ function startWaves(requestedWave=null){
     waveState={
         wave:selectedWave,
         player:{x:WIDTH/2,y:HEIGHT/2,maxHealth:save.player_max_health,health:save.player_health,damage:save.player_damage,speed:save.player_speed,range:save.player_attack_range,cooldown:0},
-        enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false
+        enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false,
+        infinite:mode==="infinite",spawnTimer:3,kills:0,nextInfiniteBoss:25
     };
     renderWavePage();
     spawnWave(waveState.wave);
 }
+function startInfinite(){
+    startWaves(1,"infinite");
+    if(waveState && waveState.infinite){
+        waveState.enemies=[];
+        spawnEnemy(Math.random()<.5?"broccoli":"steak");
+        spawnEnemy(Math.random()<.5?"broccoli":"steak");
+        toast("INFINITE SURVIVAL: 2 ENEMIES EVERY 3 SECONDS!");
+    }
+}
 function renderWavePage(){
     setResponsiveWaveDimensions();
-    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/${MAX_WAVES}</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="openUpgradeShop()">UPGRADES</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
+    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">${waveState.infinite?`INFINITE • KILLS ${waveState.kills||0}`:`Wave ${waveState.wave}/${MAX_WAVES}`}</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="openUpgradeShop()">UPGRADES</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
     const c=document.getElementById("waveCanvas");
     c.addEventListener("pointerdown",e=>{if(e.target===c)waveAttack();});
     document.getElementById("attackTouch").addEventListener("pointerdown",e=>{e.preventDefault();waveAttack();});
@@ -1255,7 +1265,7 @@ function waveAttack(){
     const p=waveState.player;if(p.cooldown>0)return;p.cooldown=.35;waveState.effects.push({x:p.x,y:p.y,r:totalRange(),life:.18});
     for(const e of waveState.enemies){if(!e.alive)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<=totalRange()+e.radius){e.health-=totalDamage();sfxHit();hitParticles(e.x,e.y);textEffect(e.x,e.y-35,"-"+Math.round(totalDamage()),C.YELLOW);if(e.health<=0)killEnemy(e);}}
 }
-function killEnemy(e){if(!e.alive)return;sfxHit();e.alive=false;const w=waveState.wave;const reward=(e.boss?(8+Math.floor(w/2)):1)+totalCreditBonus();save.candy_credits+=reward;explosion(e.x,e.y);textEffect(e.x,e.y-40,"+"+reward+" Candy",C.YELLOW);if(e.boss){sfxWin();toast("DEFEATED: "+e.name+"!");}if(Math.random()<.35)waveState.pickups.push({x:e.x,y:e.y,value:1+Math.floor(Math.random()*4),life:10,bob:Math.random()*10});if(Math.random()<.035){const c=randomCard();save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;toast("CARD DROP: "+c[0]+" ["+c[1]+"]");}if(Math.random()<.01){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;toast("PET DROP: "+p.name+" ["+p.rarity+"]");}saveGame();}
+function killEnemy(e){if(!e.alive)return;sfxHit();e.alive=false;if(waveState.infinite){waveState.kills=(waveState.kills||0)+1;if(waveState.kills%10===0){waveState.wave=Math.min(300,waveState.wave+1);toast("INFINITE LEVEL "+waveState.wave+"!");}}const w=waveState.wave;const reward=(e.boss?(8+Math.floor(w/2)):1)+totalCreditBonus();save.candy_credits+=reward;explosion(e.x,e.y);textEffect(e.x,e.y-40,"+"+reward+" Candy",C.YELLOW);if(e.boss){sfxWin();toast("DEFEATED: "+e.name+"!");}if(Math.random()<.35)waveState.pickups.push({x:e.x,y:e.y,value:1+Math.floor(Math.random()*4),life:10,bob:Math.random()*10});if(Math.random()<.035){const c=randomCard();save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;toast("CARD DROP: "+c[0]+" ["+c[1]+"]");}if(Math.random()<.01){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;toast("PET DROP: "+p.name+" ["+p.rarity+"]");}saveGame();}
 function hitParticles(x,y){for(let i=0;i<8;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:.6,size:3+Math.random()*5,color:[C.RED,C.YELLOW,C.ORANGE,C.WHITE][Math.floor(Math.random()*4)]});}
 function explosion(x,y){for(let i=0;i<24;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:.5+Math.random()*.7,size:3+Math.random()*5,color:[C.RED,C.ORANGE,C.YELLOW,C.GREEN,C.WHITE,C.CYAN][Math.floor(Math.random()*6)]});}
 function textEffect(x,y,text,color){waveState.texts.push({x,y,text,color,life:1.3});}
@@ -1329,6 +1339,18 @@ function updateWave(dt){
     if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;if(keys.w||keys.arrowup)dy-=1;if(keys.s||keys.arrowdown)dy+=1;
     const len=Math.hypot(dx,dy);if(len>0){dx/=len;dy/=len;p.x+=dx*totalSpeed()*60*dt;p.y+=dy*totalSpeed()*60*dt;}
     p.x=Math.max(50,Math.min(WIDTH-50,p.x));p.y=Math.max(100,Math.min(HEIGHT-70,p.y));
+    if(waveState.infinite){
+        waveState.spawnTimer=(waveState.spawnTimer??3)-dt;
+        if(waveState.spawnTimer<=0){
+            waveState.spawnTimer+=3;
+            const roomFor=Math.max(0,60-waveState.enemies.filter(e=>e.alive).length);
+            for(let i=0;i<Math.min(2,roomFor);i++){
+                const bossEvery=waveState.kills>=waveState.nextInfiniteBoss;
+                if(bossEvery)waveState.nextInfiniteBoss+=25;
+                spawnEnemy(Math.random()<.5?"broccoli":"steak",bossEvery);
+            }
+        }
+    }
     for(const e of waveState.enemies){if(!e.alive)continue;const ex=p.x-e.x,ey=p.y-e.y,d=Math.hypot(ex,ey);if(d>1&&d>e.radius+45){e.x+=(ex/d)*e.speed*60*dt;e.y+=(ey/d)*e.speed*60*dt;}e.attackTimer-=dt;if(d<e.radius+45&&e.attackTimer<=0){damagePlayer(e.damage);e.attackTimer=e.type==="final_boss"?.75:1.0;}}
     for(const pick of waveState.pickups){pick.life-=dt;pick.bob+=dt*5;pick.y+=Math.sin(pick.bob)*.04;const d=Math.hypot(p.x-pick.x,p.y-pick.y);if(d<42){sfxCollect();save.candy_credits+=pick.value;pick.life=0;saveGame();}}
     waveState.pickups=waveState.pickups.filter(x=>x.life>0);
@@ -1337,8 +1359,8 @@ function updateWave(dt){
     for(const x of waveState.texts){x.life-=dt;x.y-=35*dt;}waveState.texts=waveState.texts.filter(x=>x.life>0);
     for(const x of waveState.effects)x.life-=dt;waveState.effects=waveState.effects.filter(x=>x.life>0);
     waveState.enemies=waveState.enemies.filter(e=>e.alive);
-    if(waveState.enemies.length===0)completeWave();
-    document.getElementById("hpFill").style.width=(Math.max(0,p.health/p.maxHealth)*100)+"%";document.getElementById("hpText").textContent=`HP ${Math.round(p.health)}/${p.maxHealth}`;document.getElementById("candyText").textContent=`Candy: ${save.candy_credits}`;document.getElementById("waveText").textContent=`Wave ${waveState.wave}/${MAX_WAVES}`;
+    if(!waveState.infinite && waveState.enemies.length===0)completeWave();
+    document.getElementById("hpFill").style.width=(Math.max(0,p.health/p.maxHealth)*100)+"%";document.getElementById("hpText").textContent=`HP ${Math.round(p.health)}/${p.maxHealth}`;document.getElementById("candyText").textContent=`Candy: ${save.candy_credits}`;document.getElementById("waveText").textContent=waveState.infinite?`INFINITE • KILLS ${waveState.kills||0}`:`Wave ${waveState.wave}/${MAX_WAVES}`;
 }
 function drawWave(){
     const c=document.getElementById("waveCanvas");if(!c)return;const ctx=c.getContext("2d");
@@ -1772,7 +1794,7 @@ function finishCardBattle(won){cardBattle.over=true;if(won){save.wins++;save.tro
 // ================================================================
 function multiplayerPage(){
     currentMode="multiplayer";
-    render(`${topbar()}<div class="section"><h1>MULTIPLAYER</h1><div class="panel center"><h2>ONLINE MULTIPLAYER</h2><p>Multiplayer is its own menu. It does not automatically enter SOLO WAVES or CARD BATTLE.</p><div class="form"><input id="multiName" maxlength="18" value="${esc(save.username)}" placeholder="PLAYER NAME"><input id="roomInput" maxlength="12" placeholder="ROOM CODE"></div><br><div class="skill-row"><button class="green" onclick="createMultiplayerRoom()">CREATE ROOM</button><button class="blue" onclick="joinMultiplayerRoom()">JOIN ROOM</button><button class="gray" onclick="findMultiplayerMatch()">FIND PLAYER</button></div><div id="netState" class="notice">SERVER NOT CONNECTED</div></div><div class="multi-grid"><div class="panel"><h2>YOUR MULTIPLAYER CARD</h2><p>${esc(save.equipped_card||"NONE")}</p><p>Pet: ${esc(save.equipped_pet||"NONE")}</p></div><div class="panel"><h2>ROOM</h2><p id="roomLabel">${multiRoom||"NONE"}</p><p>Share the room code with the other player.</p></div></div></div>`);
+    render(`${topbar()}<div class="section"><h1>MULTIPLAYER</h1><div class="panel center"><h2>ONLINE MULTIPLAYER</h2><p>Create a room, join a friend, or find a player. Online survival waves/infinite co-op needs matching server support; this lobby currently uses the existing online card battle.</p><div class="form"><input id="multiName" maxlength="18" value="${esc(save.username)}" placeholder="PLAYER NAME"><input id="roomInput" maxlength="12" placeholder="ROOM CODE"></div><br><div class="skill-row"><button class="green" onclick="createMultiplayerRoom()">CREATE ROOM</button><button class="blue" onclick="joinMultiplayerRoom()">JOIN ROOM</button><button class="gray" onclick="findMultiplayerMatch()">FIND PLAYER</button></div><div id="netState" class="notice">SERVER NOT CONNECTED</div></div><div class="multi-grid"><div class="panel"><h2>YOUR MULTIPLAYER CARD</h2><p>${esc(save.equipped_card||"NONE")}</p><p>Pet: ${esc(save.equipped_pet||"NONE")}</p></div><div class="panel"><h2>ROOM</h2><p id="roomLabel">${multiRoom||"NONE"}</p><p>Share the room code with the other player.</p></div></div></div>`);
 }
 function setNet(text){const x=document.getElementById("netState");if(x)x.textContent=text;}
 function socketUrl(){const proto=location.protocol==="https:"?"wss":"ws";return `${proto}://${location.host}`;}
@@ -1881,10 +1903,21 @@ function rankPage(){
 // ================================================================
 // EXTRA MENU — NEW MODES ARE ADDED WITHOUT REPLACING OG PLAY
 // ================================================================
+function gameModesPage(){
+    const modal=document.createElement("div");
+    modal.className="modal";
+    modal.innerHTML=`<div class="modal-box"><h1>CHOOSE GAME MODE</h1><p>Pick how you want to survive.</p><div class="skill-row">
+    <button class="green" onclick="this.closest('.modal').remove();startWaves()">WAVES</button>
+    <button class="purple" onclick="this.closest('.modal').remove();startInfinite()">INFINITE SURVIVAL</button>
+    <button class="blue" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button>
+    </div><p style="font-size:13px;color:#d8caff">Infinite: two enemies spawn every 3 seconds. Every 10 kills increases the danger level.</p><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    document.body.appendChild(modal);
+}
+
 function mainMenuExtras(){
     const modal=document.createElement("div");
     modal.className="modal";
-    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();gameModesPage()">WAVES / INFINITE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
     document.body.appendChild(modal);
 }
 
