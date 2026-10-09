@@ -237,6 +237,69 @@ html, body { width:100%; min-height:100%; overflow:hidden; }
 }
 
 .shop-bundle-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:12px 0 24px}.shop-bundle-grid .panel{margin:0}.skin-box p{overflow-wrap:anywhere}.skin-box button{max-width:100%;white-space:normal}
+
+
+/* CANDY GALAXY ULTRA GRAPHICS UPDATE */
+:root{--dark-bg:#090b24;--panel:#111536;--panel2:#1a2050;--purple:#a45bff;--blue:#35d9ff;--yellow:#ffe878;--pink:#ff54ce;--green:#5affbc}
+html,body{background:#08091d;background-image:radial-gradient(ellipse at 12% 15%,rgba(92,52,198,.24),transparent 38%),radial-gradient(ellipse at 86% 20%,rgba(0,183,255,.17),transparent 34%),radial-gradient(ellipse at 50% 100%,rgba(255,52,194,.13),transparent 45%)}
+body:before{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:.38;background-image:radial-gradient(2px 2px at 8% 18%,#fff 98%,transparent),radial-gradient(1px 1px at 22% 72%,#9fefff 98%,transparent),radial-gradient(2px 2px at 41% 28%,#fff 98%,transparent),radial-gradient(1px 1px at 62% 81%,#e2a8ff 98%,transparent),radial-gradient(2px 2px at 83% 43%,#fff 98%,transparent),radial-gradient(1px 1px at 93% 12%,#8ef7ff 98%,transparent),radial-gradient(1px 1px at 70% 8%,#fff 98%,transparent);background-size:410px 320px;animation:galaxyDrift 42s linear infinite}
+@keyframes galaxyDrift{from{background-position:0 0}to{background-position:410px 320px}}
+@keyframes candyGlow{0%,100%{box-shadow:0 0 8px #754cff55,0 0 20px #24d8ff20,inset 0 0 9px #ffffff08}50%{box-shadow:0 0 14px #b65cff88,0 0 28px #24d8ff40,inset 0 0 13px #ffffff12}}
+@keyframes holoSweep{0%{background-position:-180% 0}100%{background-position:180% 0}}
+@keyframes floatCandy{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+#app{position:relative;z-index:1}
+.page,.canvas-page{background-color:#090b24;background-image:radial-gradient(ellipse at 14% 8%,rgba(106,70,255,.19),transparent 40%),radial-gradient(ellipse at 88% 80%,rgba(0,214,255,.11),transparent 35%)}
+button{border:1px solid rgba(190,211,255,.72);border-radius:13px;background:linear-gradient(145deg,#373a72,#1b1d49 65%,#30215b);box-shadow:0 4px 0 #08091b,0 0 12px #725cff35,inset 0 1px 0 #ffffff2b;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;position:relative;overflow:hidden}
+button:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 20%,#ffffff15 44%,#ffffff03 56%,transparent 78%);background-size:220% 100%;animation:holoSweep 7s linear infinite}
+button:hover{filter:brightness(1.25) saturate(1.16);transform:translateY(-2px);box-shadow:0 5px 0 #08091b,0 0 18px #4fdfff44,inset 0 1px 0 #ffffff44}
+button:active{transform:translateY(1px);box-shadow:0 1px 0 #08091b,inset 0 2px 8px #0005}
+button.green{background:linear-gradient(135deg,#20b98b,#147b8c)}button.blue{background:linear-gradient(135deg,#1689df,#4735b9)}button.purple{background:linear-gradient(135deg,#bb4dff,#6129be)}button.orange{background:linear-gradient(135deg,#ff9c40,#d64a77)}button.gold{background:linear-gradient(135deg,#ffe78b,#d89a28 55%,#87501a);color:#24133c;text-shadow:0 1px #fff7}button.red{background:linear-gradient(135deg,#ff527d,#a82063)}button.gray{background:linear-gradient(135deg,#555d86,#292d4d)}
+.og-title,.section h1,.modal-box h1{background:linear-gradient(100deg,#fff,#a5f5ff 22%,#ffb9f5 46%,#fff2a6 67%,#c9b3ff 84%,#fff);background-size:220% auto;color:transparent;background-clip:text;-webkit-background-clip:text;text-shadow:0 0 20px #8a64ff55;animation:galaxyTitle 9s linear infinite}
+@keyframes galaxyTitle{to{background-position:220% center}}
+.og-subtitle{color:#8ff4ff;text-shadow:0 0 8px #2bdfff,0 0 22px #b34cff88}
+.modal{background:radial-gradient(ellipse at center,#17144cdd,#050615f5);backdrop-filter:blur(7px)}
+.modal-box{background:linear-gradient(145deg,rgba(25,28,72,.98),rgba(10,13,37,.98));border:2px solid transparent;background-clip:padding-box;box-shadow:0 0 0 1px #9e8affaa,0 0 28px #725cff55,0 0 65px #16c9ff1b;border-radius:20px;position:relative}
+.modal-box:before{content:"";position:absolute;inset:-2px;border-radius:21px;padding:2px;background:linear-gradient(125deg,#65edff,#9b58ff,#ff75d7,#ffe98d,#65edff);background-size:260% 260%;animation:galaxyBorder 9s linear infinite;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none}
+@keyframes galaxyBorder{to{background-position:260% 0}}
+.panel,.card,.pack-item,.battle-card,.shop-bundle-grid .panel,.skin-box{background:linear-gradient(150deg,rgba(37,43,94,.96),rgba(14,17,48,.98));border-color:#8b9bff88!important;box-shadow:0 0 13px #4b6cff26,inset 0 1px 0 #ffffff14;}
+.card,.pack-item,.battle-card{border-radius:15px;position:relative;overflow:hidden}
+.card:after,.pack-item:after,.battle-card:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 10%,#ffffff09 45%,transparent 70%);background-size:220% 100%;animation:holoSweep 11s linear infinite}
+.card:hover,.pack-item:hover{transform:translateY(-3px);box-shadow:0 0 20px #9d6bff66}
+input,select,textarea{background:#0b1030!important;color:#fff!important;border:1px solid #7eeeffaa!important;border-radius:10px!important;box-shadow:inset 0 0 12px #222a7044}
+.topbar{background:linear-gradient(90deg,#111536ee,#24205bee,#111536ee);border:1px solid #8b9bff55;border-radius:14px;box-shadow:0 0 18px #5d5dff22}
+.toast{border:1px solid #86edff!important;background:linear-gradient(135deg,#28205e,#111735)!important;box-shadow:0 0 24px #48dfff66!important;border-radius:13px!important}
+.shop-bundle-grid .panel{animation:candyGlow 5s ease-in-out infinite}
+canvas.game{filter:saturate(1.13) contrast(1.04)}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition:none!important}}
+
+
+/* CANDY GALAXY BUTTON BRIGHTNESS PATCH */
+button{
+  color:#ffffff !important;
+  background:linear-gradient(135deg,#8b5cff 0%,#554dff 48%,#18bff5 100%) !important;
+  border:2px solid #c8f5ff !important;
+  box-shadow:0 0 0 1px rgba(142,110,255,.55),0 0 13px rgba(72,153,255,.55),inset 0 1px 0 rgba(255,255,255,.35) !important;
+  text-shadow:0 1px 2px rgba(18,9,48,.85);
+  transition:filter .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+button:hover,button:focus-visible{
+  filter:brightness(1.25) saturate(1.12) !important;
+  box-shadow:0 0 0 2px #ffffff,0 0 20px rgba(86,200,255,.85),inset 0 1px 0 rgba(255,255,255,.55) !important;
+  outline:none;
+}
+button:active{filter:brightness(1.12) !important;transform:translateY(1px) scale(.99)}
+button.green{background:linear-gradient(135deg,#36f59a,#00a96b) !important;border-color:#b5ffda !important;box-shadow:0 0 15px rgba(40,255,157,.4) !important}
+button.blue{background:linear-gradient(135deg,#58d8ff,#3868ff) !important;border-color:#c3f4ff !important;box-shadow:0 0 15px rgba(63,179,255,.45) !important}
+button.purple{background:linear-gradient(135deg,#e17bff,#873bff) !important;border-color:#f2caff !important;box-shadow:0 0 15px rgba(192,91,255,.45) !important}
+button.orange{background:linear-gradient(135deg,#ffcf68,#ff7b35) !important;border-color:#fff0c0 !important;box-shadow:0 0 15px rgba(255,151,64,.42) !important}
+button.gold{background:linear-gradient(135deg,#fff27a,#f4a900) !important;color:#382000 !important;border-color:#fff9c7 !important;text-shadow:none;box-shadow:0 0 16px rgba(255,210,54,.48) !important}
+button.red{background:linear-gradient(135deg,#ff718d,#e51e58) !important;border-color:#ffc4d2 !important;box-shadow:0 0 15px rgba(255,56,108,.4) !important}
+button.gray{background:linear-gradient(135deg,#8886a8,#514d70) !important;border-color:#d6d1ff !important}
+button:disabled{filter:saturate(.55) brightness(.8) !important;opacity:.78;cursor:not-allowed}
+.language-select{background:linear-gradient(135deg,#8b5cff,#2769d9) !important;border-color:#c8f5ff !important;box-shadow:0 0 12px rgba(72,153,255,.4)}
+.wave-pick{background:linear-gradient(135deg,#393064,#244d80) !important;border-color:#9b8cff !important;box-shadow:0 0 8px rgba(116,101,255,.3)}
+.wave-pick.is-boss{background:linear-gradient(135deg,#79521a,#c07a18) !important;border-color:#ffe38a !important;box-shadow:0 0 12px rgba(255,191,49,.4)}
+
 </style>
 </head>
 <body>
@@ -1860,14 +1923,16 @@ function redeemSecretCode(){
         result="CHIPY UNLOCKED! OPEN PETS TO EQUIP HIM.";
     }else if(code==="rich"){
         save.candy_credits+=2000;
-        result="RICH CODE REDEEMED! +2,000 CANDY CREDITS.";
+        save.candy_gems=(Number(save.candy_gems)||0)+500;
+        result="RICH CODE REDEEMED! +2,000 CANDY CREDITS AND +500 CANDY GEMS.";
     }else if(code==="admin"){
         // Unlock all collection content and all replayable waves/skins.
         for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
         for(const p of PETS)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));
         save.highest_wave_cleared=MAX_WAVES;
         save.candy_credits+=10000;
-        result="ADMIN CODE REDEEMED! ALL CARDS, PETS, WAVES AND SKINS UNLOCKED. +10,000 CANDY CREDITS.";
+        save.candy_gems=(Number(save.candy_gems)||0)+6000;
+        result="ADMIN CODE REDEEMED! ALL CARDS, PETS AND WAVES UNLOCKED. +10,000 CANDY CREDITS AND +6,000 CANDY GEMS.";
     }
     save.redeemed_codes.push(code);
     saveGame();
