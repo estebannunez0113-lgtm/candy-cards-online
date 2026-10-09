@@ -1,0 +1,48 @@
+name: Build Candy Cards APK
+
+on:
+workflow_dispatch:
+push:
+branches:
+- main
+
+jobs:
+build-apk:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Download repository
+    uses: actions/checkout@v4
+
+  - name: Set up Java
+    uses: actions/setup-java@v4
+    with:
+      distribution: temurin
+      java-version: '17'
+
+  - name: Set up Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: '20'
+
+  - name: Install Bubblewrap
+    run: npm install -g @bubblewrap/cli
+
+  - name: Build Android APK
+    run: |
+      mkdir -p "$HOME/.bubblewrap"
+      bubblewrap init \
+        --manifest https://candy-cards-online.onrender.com/manifest.webmanifest \
+        --directory ./android-project \
+        --packageId com.candycards.online \
+        --appName "Candy Cards Online" \
+        --launcherName "Candy Cards" \
+        --themeColor "#7c3aed" \
+        --backgroundColor "#160d2b" \
+        --display standalone \
+        --orientation landscape \
+        --startUrl /
+      cd android-project
+      bubblewrap build --skipPwaValidation
+```
