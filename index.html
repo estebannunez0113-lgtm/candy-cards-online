@@ -332,8 +332,24 @@ const SKINS = [
 ["Shadow Lollipop",40],["Diamond Lollipop",45],["Toxic Lollipop",50],["Candy King",50]
 ];
 
+const MAX_WAVES = 300;
 const BOSS_NAMES = {5:"BROCCOLI KING",10:"STEAK TITAN",15:"CANDY CRUSHER",20:"TOXIC BROCCOLI",25:"GOLDEN STEAK",30:"FIRE CANDY",35:"GALAXY BEAST",40:"SHADOW FOOD",45:"DIAMOND DESTROYER",50:"THE CANDY APOCALYPSE"};
 const BOSS_COLORS = {5:C.GREEN,10:C.BROWN,15:C.PINK,20:C.CYAN,25:C.GOLD,30:C.ORANGE,35:C.PURPLE,40:"#1e1e2d",45:C.LIGHT_BLUE,50:C.PINK};
+const BOSS_COLOR_POOL = [C.CYAN,C.PURPLE,C.GOLD,C.ORANGE,C.PINK,C.LIGHT_BLUE,C.GREEN,"#ff4fe1","#92ff46","#ff5b36","#9c73ff","#ffffff"];
+const BOSS_ADJECTIVES = ["CRYSTAL","STORM","INFERNAL","VOID","PRISMATIC","TOXIC","NEON","COSMIC","FROST","SHADOW","RADIANT","GLITCHED","THUNDER","NOVA","ETERNAL","CHAOS","DIAMOND","PHANTOM","ASTRAL","OMEGA"];
+const BOSS_CREATURES = ["BROCCOLI EMPEROR","STEAK COLOSSUS","CANDY HYDRA","SUGAR BEAST","LOLLIPOP DESTROYER","COOKIE TITAN","GUMDROP MONARCH","CHOCOLATE DRAGON","JELLY OVERLORD","CARAMEL DEVOURER","MARSHMALLOW GIANT","CANDY PHOENIX","FROST WOLF","RAINBOW GOLEM","COSMIC BEHEMOTH"];
+function bossNameForWave(w){
+    if(w===MAX_WAVES) return "THE ULTIMATE CANDY GOD";
+    if(BOSS_NAMES[w]) return BOSS_NAMES[w];
+    const i=Math.max(0,Math.floor(w/5)-11);
+    const adjective=BOSS_ADJECTIVES[i%BOSS_ADJECTIVES.length];
+    const creature=BOSS_CREATURES[Math.floor(i/BOSS_ADJECTIVES.length)%BOSS_CREATURES.length];
+    const tier=Math.floor((w-1)/50)+1;
+    return `${adjective} ${creature} — TIER ${tier}`;
+}
+function bossColorForWave(w){
+    return BOSS_COLORS[w] || BOSS_COLOR_POOL[(Math.floor(w/5)-1+BOSS_COLOR_POOL.length*100)%BOSS_COLOR_POOL.length] || C.RED;
+}
 
 const RANKS = [
 {name:"Iron",min:0,max:99},
@@ -415,6 +431,7 @@ function loadSave(){
         if(!out.equipped_skin && parsed.skin) out.equipped_skin=parsed.skin;
         if(!out.current_wave && parsed.wave) out.current_wave=parsed.wave;
         if(!Number.isFinite(Number(out.player_health))) out.player_health=out.player_max_health||100;
+        out.current_wave=Math.max(1,Math.min(MAX_WAVES,Math.floor(Number(out.current_wave)||1)));
         out.cards_owned=(out.cards_owned&&typeof out.cards_owned==="object")?out.cards_owned:{};
         out.pets_owned=(out.pets_owned&&typeof out.pets_owned==="object")?out.pets_owned:{};
         return out;
@@ -543,7 +560,7 @@ function render(html){
     root.querySelectorAll("[data-language-anchor]").forEach(x=>x.innerHTML=languageSelectorHtml());
 }
 
-function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/50</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
 
 // ================================================================
 // OG MAIN MENU — same important positions from main.py
@@ -573,7 +590,7 @@ function detectDevice(){const w=innerWidth;return w<650?"PHONE":w<1000?"TABLET":
 // ================================================================
 function howToPlayPage(){
     currentMode="how-to-play";
-    render(`${topbar()}<div class="howto-scroll"><div class="section"><h1>HOW TO PLAY</h1><div class="panel"><h2>PLAY / SOLO WAVES</h2><p>Move your lollipop around the arena and attack the food enemies. Defeat every enemy to clear the wave.</p><p><b>PC:</b> Use WASD or the arrow keys to move. Press SPACE to attack.</p><p><b>PHONE / TABLET:</b> Use the touch joystick to move and the ATTACK button to attack.</p></div><div class="panel"><h2>WAVES</h2><p>Normal waves spawn broccoli and steak enemies. Every 5th wave has a boss. Boss waves are 5, 10, 15, 20, 25, 30, 35, 40, 45, and 50.</p><p>Wave 50 is <b>THE CANDY APOCALYPSE</b>.</p></div><div class="panel"><h2>CANDY CARDS</h2><p>Open packs for <b>2 cards + 1 pet</b>. Collected cards can be equipped for CARD BATTLE.</p></div><div class="panel"><h2>PETS</h2><p>Equip a pet from the PETS menu. Your equipped pet appears beside you during SOLO WAVES and gives its own bonuses.</p></div><div class="panel"><h2>CARD BATTLE</h2><p>Card Battle is separate from SOLO WAVES. Your card has DAMAGE at the top-left and HP at the top-right. Reduce the opponent card's HP to 0 to win.</p></div><div class="panel"><h2>MULTIPLAYER</h2><p>Multiplayer is a separate mode from Card Battle and Rank. Use the online room system to play with another player.</p></div><div class="panel"><h2>RANK</h2><p>Rank is separate from the wave game: Iron → Bronze → Gold → Platinum → Amethyst → Candy Champion.</p></div></div></div>`);
+    render(`${topbar()}<div class="howto-scroll"><div class="section"><h1>HOW TO PLAY</h1><div class="panel"><h2>PLAY / SOLO WAVES</h2><p>Move your lollipop around the arena and attack the food enemies. Defeat every enemy to clear the wave.</p><p><b>PC:</b> Use WASD or the arrow keys to move. Press SPACE to attack.</p><p><b>PHONE / TABLET:</b> Use the touch joystick to move and the ATTACK button to attack.</p></div><div class="panel"><h2>WAVES</h2><p>Normal waves spawn broccoli and steak enemies. Every 5th wave has a boss. A boss appears every 5th wave through wave 300. Later bosses have new names and get stronger as you advance.</p><p>Wave 50 is <b>THE CANDY APOCALYPSE</b>. Wave 300 is <b>THE ULTIMATE CANDY GOD</b>, the final boss.</p></div><div class="panel"><h2>CANDY CARDS</h2><p>Open packs for <b>2 cards + 1 pet</b>. Collected cards can be equipped for CARD BATTLE.</p></div><div class="panel"><h2>PETS</h2><p>Equip a pet from the PETS menu. Your equipped pet appears beside you during SOLO WAVES and gives its own bonuses.</p></div><div class="panel"><h2>CARD BATTLE</h2><p>Card Battle is separate from SOLO WAVES. Your card has DAMAGE at the top-left and HP at the top-right. Reduce the opponent card's HP to 0 to win.</p></div><div class="panel"><h2>MULTIPLAYER</h2><p>Multiplayer is a separate mode from Card Battle and Rank. Use the online room system to play with another player.</p></div><div class="panel"><h2>RANK</h2><p>Rank is separate from the wave game: Iron → Bronze → Gold → Platinum → Amethyst → Candy Champion.</p></div></div></div>`);
 }
 
 // ================================================================
@@ -942,7 +959,7 @@ function startWaves(){
     }
 
     waveState={
-        wave:Math.max(1,Math.min(50,save.current_wave)),
+        wave:Math.max(1,Math.min(MAX_WAVES,Number(save.current_wave)||1)),
         player:{x:WIDTH/2,y:HEIGHT/2,maxHealth:save.player_max_health,health:save.player_health,damage:save.player_damage,speed:save.player_speed,range:save.player_attack_range,cooldown:0},
         enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false
     };
@@ -951,7 +968,7 @@ function startWaves(){
 }
 function renderWavePage(){
     setResponsiveWaveDimensions();
-    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/50</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="shopPage()">SHOP</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
+    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/${MAX_WAVES}</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="shopPage()">SHOP</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
     const c=document.getElementById("waveCanvas");
     c.addEventListener("pointerdown",e=>{if(e.target===c)waveAttack();});
     document.getElementById("attackTouch").addEventListener("pointerdown",e=>{e.preventDefault();waveAttack();});
@@ -960,11 +977,28 @@ function renderWavePage(){
     requestAnimationFrame(waveLoop);
 }
 function spawnWave(w){
-    waveState.enemies=[];waveState.wave=w;
+    waveState.enemies=[];
+    waveState.wave=Math.max(1,Math.min(MAX_WAVES,Math.floor(Number(w)||1)));
+    w=waveState.wave;
+    // Enemy counts stay capped so late waves remain playable on phones/tablets.
     const enemyCount=Math.min(50,5+w*2);
-    if(w===50){spawnEnemy("final_boss",true);sfxBoss();for(let i=0;i<10;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast("WAVE 50 — FINAL BOSS!");return;}
-    if(w%5===0){const n=Math.max(1,enemyCount-1);sfxBoss();spawnEnemy(Math.random()<.5?"broccoli":"steak",true);for(let i=0;i<n;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast(BOSS_NAMES[w]+" APPEARS!");}
-    else{for(let i=0;i<enemyCount;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");toast("WAVE "+w+"!");}
+    if(w===MAX_WAVES){
+        spawnEnemy("final_boss",true);
+        sfxBoss();
+        for(let i=0;i<12;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");
+        toast("WAVE 300 — FINAL BOSS: THE ULTIMATE CANDY GOD!");
+        return;
+    }
+    if(w%5===0){
+        const n=Math.max(1,enemyCount-1);
+        sfxBoss();
+        spawnEnemy(Math.random()<.5?"broccoli":"steak",true);
+        for(let i=0;i<n;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");
+        toast(bossNameForWave(w)+" APPEARS!");
+    }else{
+        for(let i=0;i<enemyCount;i++)spawnEnemy(Math.random()<.5?"broccoli":"steak");
+        toast("WAVE "+w+"!");
+    }
 }
 function spawnEnemy(type,boss=false){
     const side=Math.floor(Math.random()*4);let x,y;
@@ -974,11 +1008,40 @@ function spawnEnemy(type,boss=false){
     else{x=50;y=100+Math.random()*(HEIGHT-150);}
     const w=waveState.wave;
     let e={type,x,y,boss,alive:true,attackTimer:boss?.7:(.2+Math.random()*.8)};
-    if(type==="final_boss"){e.radius=82;e.maxHealth=3000+w*100;e.health=e.maxHealth;e.speed=.65;e.damage=85;e.attackTimer=.7;}
-    else if(type==="broccoli"){e.radius=28;e.maxHealth=35+w*5;e.health=e.maxHealth;e.speed=1.2+w*.025;e.damage=7+Math.floor(w/4);}
-    else{e.radius=30;e.maxHealth=50+w*7;e.health=e.maxHealth;e.speed=.9+w*.02;e.damage=10+Math.floor(w/3);}
-    if(boss&&type!=="final_boss"){e.maxHealth*=5;e.health=e.maxHealth;e.radius*=1.55;e.speed*=.75;e.damage*=2;}
-    e.name=BOSS_NAMES[w]||"FOOD BOSS";e.color=BOSS_COLORS[w]||C.RED;waveState.enemies.push(e);
+    if(type==="final_boss"){
+        e.radius=82;
+        e.maxHealth=3000+w*100;
+        e.health=e.maxHealth;
+        e.speed=.65+Math.min(.45,w/1000);
+        e.damage=85+Math.floor(w/10);
+        e.attackTimer=.7;
+    }
+    else if(type==="broccoli"){
+        e.radius=28;
+        e.maxHealth=35+w*5;
+        e.health=e.maxHealth;
+        e.speed=1.2+w*.025;
+        e.damage=7+Math.floor(w/4);
+    }
+    else{
+        e.radius=30;
+        e.maxHealth=50+w*7;
+        e.health=e.maxHealth;
+        e.speed=.9+w*.02;
+        e.damage=10+Math.floor(w/3);
+    }
+    // Every five waves, the boss gets stronger as the campaign advances.
+    if(boss&&type!=="final_boss"){
+        const tier=Math.max(1,Math.floor((w-1)/50)+1);
+        e.maxHealth*=5+Math.min(10,tier-1);
+        e.health=e.maxHealth;
+        e.radius*=1.55+Math.min(.35,tier*.025);
+        e.speed*=Math.max(.60,.75-tier*.01);
+        e.damage*=2+Math.min(3,Math.floor((tier-1)/2));
+    }
+    e.name=bossNameForWave(w);
+    e.color=bossColorForWave(w);
+    waveState.enemies.push(e);
 }
 function totalPet(stat){const p=pet(save.equipped_pet);return p?Number(p[stat]||0):0;}
 function totalDamage(){return save.player_damage+totalPet("damage");}
@@ -1026,7 +1089,7 @@ function completeWave(){
        original 20% max-HP healing before the next wave. */
     save.player_health=Math.max(0,Math.min(save.player_max_health,Math.round(waveState.player.health)));
 
-    if(w<50){
+    if(w<MAX_WAVES){
         save.current_wave=w+1;
         save.player_health=Math.min(
             save.player_max_health,
@@ -1038,11 +1101,11 @@ function completeWave(){
         if(unlock)toast("NEW SKIN UNLOCKED: "+unlock[0]+"!");
         setTimeout(()=>shopPage(),250);
     }else{
-        save.current_wave=50;
+        save.current_wave=MAX_WAVES;
         save.player_health=save.player_max_health;
         saveGame();
         setTimeout(()=>{
-            alert("THE CANDY APOCALYPSE DEFEATED! VICTORY!");
+            alert("THE ULTIMATE CANDY GOD DEFEATED! YOU CONQUERED ALL 300 WAVES!");
             menu();
         },100);
     }
@@ -1065,7 +1128,7 @@ function updateWave(dt){
     for(const x of waveState.effects)x.life-=dt;waveState.effects=waveState.effects.filter(x=>x.life>0);
     waveState.enemies=waveState.enemies.filter(e=>e.alive);
     if(waveState.enemies.length===0)completeWave();
-    document.getElementById("hpFill").style.width=(Math.max(0,p.health/p.maxHealth)*100)+"%";document.getElementById("hpText").textContent=`HP ${Math.round(p.health)}/${p.maxHealth}`;document.getElementById("candyText").textContent=`Candy: ${save.candy_credits}`;document.getElementById("waveText").textContent=`Wave ${waveState.wave}/50`;
+    document.getElementById("hpFill").style.width=(Math.max(0,p.health/p.maxHealth)*100)+"%";document.getElementById("hpText").textContent=`HP ${Math.round(p.health)}/${p.maxHealth}`;document.getElementById("candyText").textContent=`Candy: ${save.candy_credits}`;document.getElementById("waveText").textContent=`Wave ${waveState.wave}/${MAX_WAVES}`;
 }
 function drawWave(){
     const c=document.getElementById("waveCanvas");if(!c)return;const ctx=c.getContext("2d");
