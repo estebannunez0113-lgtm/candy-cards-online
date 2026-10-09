@@ -236,6 +236,7 @@ html, body { width:100%; min-height:100%; overflow:hidden; }
   .battle-actions { margin-top:8px; }
 }
 
+.shop-bundle-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:12px 0 24px}.shop-bundle-grid .panel{margin:0}.skin-box p{overflow-wrap:anywhere}.skin-box button{max-width:100%;white-space:normal}
 </style>
 </head>
 <body>
@@ -433,6 +434,7 @@ const DEFAULT_SAVE = {
     player_damage:20,player_speed:5.0,player_attack_range:95,
     health_level:0,damage_level:0,speed_level:0,range_level:0,
     cards_owned:{},pets_owned:{},equipped_pet:null,equipped_skin:"Classic Lollipop",
+    candy_gems:0,owned_cosmetics:[],equipped_cosmetic:"None",last_gem_gift:"",
     equipped_card:null,username:"CandyPlayer",trophies:0,wins:0,losses:0,
     redeemed_codes:[]
 };
@@ -509,6 +511,10 @@ function loadSave(){
         }
         out.cards_owned=(out.cards_owned&&typeof out.cards_owned==="object")?out.cards_owned:{};
         out.pets_owned=(out.pets_owned&&typeof out.pets_owned==="object")?out.pets_owned:{};
+        out.candy_gems=Math.max(0,Math.floor(Number(out.candy_gems)||0));
+        out.owned_cosmetics=Array.isArray(out.owned_cosmetics)?out.owned_cosmetics:[];
+        out.equipped_cosmetic=String(out.equipped_cosmetic||"None");
+        out.last_gem_gift=String(out.last_gem_gift||"");
         out.redeemed_codes=Array.isArray(out.redeemed_codes)?out.redeemed_codes.map(x=>String(x).toLowerCase()):[];
         return out;
     }catch{return clone(DEFAULT_SAVE);}
@@ -641,7 +647,7 @@ function render(html){
     root.querySelectorAll("[data-language-anchor]").forEach(x=>x.innerHTML=languageSelectorHtml());
 }
 
-function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">💎 ${Number(save.candy_gems)||0}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
 
 // ================================================================
 // OG MAIN MENU — same important positions from main.py
@@ -660,6 +666,7 @@ function menu(){
             <button class="blue" onclick="cardsPage()">CARDS</button>
             <button class="purple" onclick="petsPage()">PETS</button>
             <button class="orange" onclick="skinsPage()">SKINS</button>
+            <button class="purple" onclick="shopPage()">CANDY GEM SHOP</button>
             <button class="gray" onclick="howToPlayPage()">HOW TO PLAY</button>
         </div>
         <div class="og-info">Cards: ${countCards()}/${CANDY_CARDS.length} &nbsp;&nbsp; Pets: ${countPets()}/${PETS.length}</div>
@@ -998,10 +1005,29 @@ function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>
 // ================================================================
 // SHOP
 // ================================================================
+const GEM_BUNDLES=[
+ {id:"starter",name:"SWEET STARTER",cost:60,desc:"500 candy + 3 card packs",candy:500,packs:3,pets:0},
+ {id:"royal",name:"ROYAL TREAT",cost:150,desc:"1,500 candy + 5 card packs + 2 bonus pets",candy:1500,packs:5,pets:2},
+ {id:"mythic",name:"MYTHIC FEAST",cost:350,desc:"4,000 candy + 10 card packs + 5 bonus pets",candy:4000,packs:10,pets:5}
+];
+const GEM_COSMETICS=[
+ {id:"rainbow",name:"Rainbow Aura",cost:45,color:"#ff66d9",desc:"A colorful rainbow ring around your lollipop"},
+ {id:"galaxy",name:"Galaxy Aura",cost:90,color:"#a66bff",desc:"A cosmic purple glow"},
+ {id:"golden",name:"Golden Aura",cost:120,color:"#ffd84a",desc:"A shiny golden halo"},
+ {id:"toxic",name:"Toxic Aura",cost:75,color:"#75ff58",desc:"A bright green glow"},
+ {id:"diamond",name:"Diamond Aura",cost:180,color:"#72efff",desc:"A cool diamond-blue ring"},
+ {id:"chipy",name:"Chipy Badge",cost:100,color:"#ffbf4a",desc:"A special Chipy badge and golden aura"}
+];
 function shopPage(){
     currentMode="shop";
-    render(`${topbar()}<div class="section"><h1>CANDY SHOP</h1><div class="panel"><h2>PLAYER UPGRADES</h2><div class="skill-row"><button onclick="buyHealth()">HEALTH +20 — 10</button><button onclick="buyDamage()">DAMAGE +5 — 15</button><button onclick="buySpeed()">SPEED +0.5 — 20</button><button onclick="buyRange()">RANGE +15 — 20</button><button class="gold" onclick="openPack()">PACK — 10</button></div></div><div class="panel center">HP ${save.player_health}/${save.player_max_health} • Damage ${save.player_damage} • Speed ${save.player_speed} • Range ${save.player_attack_range}<br>Candy: ${save.candy_credits}</div><div class="shop-continue"><button class="green" onclick="startWaves()">CONTINUE</button><button class="dark" onclick="menu()">MENU</button></div></div>`);
+    const cosmetics=GEM_COSMETICS.map(c=>{const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;return `<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid ${c.color};border-radius:50%;box-shadow:0 0 18px ${c.color}"></span></div><h2>${esc(c.name)}</h2><p>${esc(c.desc)}</p><p><b>💎 ${c.cost}</b></p><button class="${eq?"gold":owned?"blue":"purple"}" onclick="${owned?`equipGemCosmetic('${c.id}')`:`buyGemCosmetic('${c.id}')`}">${eq?"EQUIPPED":owned?"EQUIP":"BUY FOR 💎 "+c.cost}</button></div>`;}).join("");
+    const bundles=GEM_BUNDLES.map(b=>`<div class="panel center"><h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p><p><b>Cost: 💎 ${b.cost}</b></p><button class="gold" onclick="buyGemBundle('${b.id}')">BUY BUNDLE</button></div>`).join("");
+    render(`${topbar()}<div class="section"><h1>CANDY SHOP</h1><div class="panel center"><h2>YOUR WALLET</h2><p>🍬 Candy: <b>${save.candy_credits.toLocaleString()}</b> &nbsp; • &nbsp; 💎 Candy Gems: <b>${save.candy_gems.toLocaleString()}</b></p><button class="purple" onclick="claimDailyGems()">${save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎"}</button><p style="font-size:13px">Earn 3 gems for each new wave you clear, or 10 gems for a boss wave. Replay rewards are not repeated.</p></div><div class="panel"><h2>PLAYER UPGRADES — 🍬 CANDY</h2><div class="skill-row"><button onclick="buyHealth()">HEALTH +20 — 10</button><button onclick="buyDamage()">DAMAGE +5 — 15</button><button onclick="buySpeed()">SPEED +0.5 — 20</button><button onclick="buyRange()">RANGE +15 — 20</button><button class="gold" onclick="openPack()">PACK — 10</button></div></div><h1>GEM BUNDLES</h1><div class="shop-bundle-grid">${bundles}</div><h1>GEM COSMETICS</h1><div class="panel center"><p>Cosmetics are visual only. Equip one to add its aura to your character.</p><p>Equipped: <b>${esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")}</b></p><button class="gray" onclick="equipGemCosmetic('none')">REMOVE AURA</button></div><div class="skin-grid">${cosmetics}</div><div class="panel center">HP ${save.player_health}/${save.player_max_health} • Damage ${save.player_damage} • Speed ${save.player_speed} • Range ${save.player_attack_range}</div><div class="shop-continue"><button class="green" onclick="startWaves()">CONTINUE</button><button class="dark" onclick="menu()">MENU</button></div></div>`);
 }
+function claimDailyGems(){const today=new Date().toISOString().slice(0,10);if(save.last_gem_gift===today)return toast("DAILY GEMS ALREADY CLAIMED!");save.last_gem_gift=today;save.candy_gems+=10;saveGame();sfxCollect();shopPage();toast("DAILY GIFT: +10 CANDY GEMS!");}
+function buyGemBundle(id){const b=GEM_BUNDLES.find(x=>x.id===id);if(!b)return;if(save.candy_gems<b.cost)return toast("NOT ENOUGH CANDY GEMS!");save.candy_gems-=b.cost;save.candy_credits+=b.candy;for(let i=0;i<b.packs;i++){const c1=randomCard(),c2=randomCard(),p=rollPet();save.cards_owned[c1[0]]=(save.cards_owned[c1[0]]||0)+1;save.cards_owned[c2[0]]=(save.cards_owned[c2[0]]||0)+1;save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}for(let i=0;i<b.pets;i++){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}saveGame();sfxWin();shopPage();toast(b.name+" PURCHASED!");}
+function buyGemCosmetic(id){const c=GEM_COSMETICS.find(x=>x.id===id);if(!c)return;if(save.owned_cosmetics.includes(id))return equipGemCosmetic(id);if(save.candy_gems<c.cost)return toast("NOT ENOUGH CANDY GEMS!");save.candy_gems-=c.cost;save.owned_cosmetics.push(id);save.equipped_cosmetic=id;saveGame();sfxCollect();shopPage();toast(c.name+" UNLOCKED!");}
+function equipGemCosmetic(id){if(id!=="none"&&!save.owned_cosmetics.includes(id))return toast("COSMETIC NOT OWNED!");save.equipped_cosmetic=id==="none"?"None":id;saveGame();shopPage();toast(id==="none"?"AURA REMOVED!":"COSMETIC EQUIPPED!");}
 function buyHealth(){if(save.candy_credits<10)return toast("NOT ENOUGH CANDY!");save.candy_credits-=10;save.player_max_health+=20;save.player_health+=20;save.health_level++;sfxCollect();saveGame();toast("HEALTH +20!");shopPage();}
 function buyDamage(){if(save.candy_credits<15)return toast("NOT ENOUGH CANDY!");save.candy_credits-=15;save.player_damage+=5;save.damage_level++;sfxCollect();saveGame();toast("DAMAGE +5!");shopPage();}
 function buySpeed(){if(save.candy_credits<20)return toast("NOT ENOUGH CANDY!");save.candy_credits-=20;save.player_speed+=.5;save.speed_level++;sfxCollect();saveGame();toast("SPEED +0.5!");shopPage();}
@@ -1187,6 +1213,9 @@ function completeWave(){
 
     waveState.finished=true;
     const w=waveState.wave;
+    const firstClear=w>highestWaveCleared();
+    const gemReward=firstClear?(w%5===0?10:3):0;
+    if(gemReward>0)save.candy_gems=(Number(save.candy_gems)||0)+gemReward;
     sfxWin();
     waveState.running=false;
 
@@ -1205,6 +1234,7 @@ function completeWave(){
             save.player_health+Math.floor(save.player_max_health*.2)
         );
         saveGame();
+        if(gemReward>0)toast(`WAVE CLEARED! +${gemReward} CANDY GEMS 💎`);
 
         const unlock=save.current_wave>previousProgress?SKINS.find(s=>s[1]===save.current_wave):null;
         if(unlock)toast("NEW SKIN UNLOCKED: "+unlock[0]+"!");
@@ -1251,6 +1281,8 @@ function drawWave(){
     for(const t of waveState.texts){ctx.globalAlpha=Math.max(0,t.life/1.3);ctx.fillStyle=t.color;ctx.font="25px Arial";ctx.textAlign="center";ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;
 }
 function drawPlayer(ctx,x,y){
+    const cosmetic=GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic);
+    if(cosmetic){ctx.save();ctx.globalAlpha=.82;ctx.strokeStyle=cosmetic.color;ctx.lineWidth=6;ctx.shadowColor=cosmetic.color;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(x,y,49,0,Math.PI*2);ctx.stroke();if(cosmetic.id==="chipy"){ctx.fillStyle=cosmetic.color;ctx.font="bold 18px Arial";ctx.textAlign="center";ctx.fillText("CHIPY",x,y-58);}ctx.restore();}
     ctx.fillStyle="#141414";ctx.beginPath();ctx.ellipse(x,y+38,28,9,0,0,Math.PI*2);ctx.fill();
     const s=save.equipped_skin;
     if(s==="Chocolate Bar"){ctx.fillStyle=C.BROWN;ctx.fillRect(x-34,y-42,68,82);ctx.strokeStyle=C.DARK_BROWN;ctx.lineWidth=4;ctx.strokeRect(x-34,y-42,68,82);for(const ox of[-17,17])for(const oy of[-22,0,22]){ctx.fillStyle="#b96432";ctx.fillRect(x+ox-8,y+oy-8,16,16);};ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+40,14,55);return;}
@@ -1782,7 +1814,7 @@ function rankPage(){
 function mainMenuExtras(){
     const modal=document.createElement("div");
     modal.className="modal";
-    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
     document.body.appendChild(modal);
 }
 
