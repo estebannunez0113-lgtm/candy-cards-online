@@ -105,6 +105,127 @@ input{font:700 18px Arial;background:#0f0d13;color:#fff;border:2px solid #4d4255
 .pack-item{background:#17131d;border:3px solid #55405f;border-radius:12px;padding:8px}
 @media(max-width:1050px){.grid6{grid-template-columns:repeat(4,165px)}.skin-grid{grid-template-columns:repeat(2,1fr)}.multi-grid{grid-template-columns:1fr}}
 @media(max-width:720px){.topbar{height:62px;overflow-x:auto}.pill{font-size:13px;padding:7px 8px}.section h1{font-size:33px}.grid6{grid-template-columns:repeat(2,165px);gap:9px}.grid5{grid-template-columns:repeat(2,200px);gap:9px}.waveHUD{height:62px;gap:8px;padding:7px}.waveHP{width:145px;height:20px}.waveHUD .txt{font-size:17px}.waveButtons{top:70px;right:6px;max-width:70vw;justify-content:flex-end;flex-wrap:wrap}.waveButtons button{font-size:12px;padding:6px 8px}.battle-side{width:175px}.battle-card{width:155px;height:240px}.battle-card canvas{width:130px;height:125px}.hpbox{width:155px}.vs{font-size:38px;top:205px}.battle-arena{min-height:520px}.og-device{right:12px;top:12px;font-size:13px}.og-title{top:70px;font-size:42px}.og-subtitle{top:127px;font-size:20px}.og-lollipop{top:175px;transform:translateX(-50%) scale(.8)}.og-buttons{top:300px}.og-info{font-size:13px;bottom:10px}}
+
+
+/* RESPONSIVE FIXES: scrollable menus, visible battle controls, portrait waves. */
+html, body { width:100%; min-height:100%; overflow:hidden; }
+#app {
+  width:100%;
+  height:100dvh;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.section { min-width:0; }
+.battle-arena {
+  height:500px;
+  min-height:500px;
+  overflow:visible;
+}
+.battle-side { top:16px; }
+.battle-card { height:275px; }
+.battle-card canvas { height:125px; }
+.battle-actions { position:relative; z-index:2; padding:5px 0 4px; }
+.battle-actions button { min-height:44px; }
+.log { margin-bottom:20px; }
+.wave-page { width:100%; height:100dvh; min-height:100%; }
+#waveCanvas { width:100%; height:100%; display:block; }
+
+@media (max-width:720px) and (orientation:portrait) {
+  .waveHUD {
+    height:70px;
+    display:grid;
+    grid-template-columns:minmax(105px,1.15fr) minmax(70px,.9fr) minmax(55px,.65fr);
+    grid-template-rows:26px 20px;
+    align-content:center;
+    align-items:center;
+    gap:3px 6px;
+    padding:5px 7px;
+  }
+  .waveHP { grid-column:1; grid-row:1; width:100%; min-width:0; height:18px; }
+  .waveHUD #candyText { grid-column:2; grid-row:1; min-width:0; white-space:nowrap; }
+  .waveHUD #waveText { grid-column:3; grid-row:1; min-width:0; white-space:nowrap; }
+  .waveHUD #cardText { grid-column:1 / 4; grid-row:2; font-size:11px; line-height:14px; }
+  .waveHUD .txt { font-size:clamp(10px,2.9vw,14px); line-height:1.1; }
+  .waveButtons {
+    top:76px;
+    left:5px;
+    right:5px;
+    max-width:none;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:4px;
+  }
+  .waveButtons button { font-size:11px; padding:5px 7px; }
+  .touch-joystick { width:112px; height:112px; left:12px; bottom:13px; border-width:3px; }
+  .touch-knob { width:48px; height:48px; }
+  .attack-touch { width:88px; height:88px; right:13px; bottom:17px; font-size:13px; border-width:4px; }
+  .battle-arena {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    align-items:start;
+    gap:6px;
+    width:100%;
+    height:auto;
+    min-height:0;
+    padding:10px 6px 14px;
+    overflow:visible;
+  }
+  .battle-side, .battle-side.left, .battle-side.right {
+    position:static;
+    top:auto; left:auto; right:auto;
+    width:auto;
+    min-width:0;
+    text-align:center;
+  }
+  .battle-side > b { font-size:clamp(11px,3.2vw,16px); overflow-wrap:anywhere; }
+  .battle-card {
+    width:100%;
+    max-width:220px;
+    height:auto;
+    min-height:225px;
+    margin:7px auto;
+    padding:5px;
+    border-width:3px;
+    overflow:hidden;
+  }
+  .battle-card canvas { width:100%; max-width:150px; height:105px; margin:5px auto; }
+  .battle-stats { gap:3px; font-size:clamp(9px,2.55vw,13px); white-space:nowrap; }
+  .battle-card b { display:block; font-size:clamp(10px,2.9vw,14px); line-height:1.15; overflow-wrap:anywhere; }
+  .battle-card div[style*="font-weight:900"] { font-size:clamp(10px,2.8vw,14px); }
+  .hpbox { width:100%; height:17px; margin:6px auto 0; }
+  .vs { display:none; }
+  .battle-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .battle-actions button { min-width:0; width:100%; font-size:clamp(12px,3.4vw,16px); padding:8px 5px; }
+  .topbar { max-width:100%; }
+  .section h1 { overflow-wrap:anywhere; }
+}
+
+@media (max-width:850px) and (orientation:landscape) {
+  .waveHUD { gap:8px; padding:7px 10px; }
+  .waveHP { width:clamp(115px,22vw,200px); }
+  .waveHUD .txt { font-size:clamp(13px,2.2vw,19px); }
+  .waveButtons { top:67px; right:6px; gap:5px; }
+  .waveButtons button { font-size:12px; padding:5px 7px; }
+  .touch-joystick { width:105px; height:105px; left:12px; bottom:12px; }
+  .touch-knob { width:47px; height:47px; }
+  .attack-touch { width:88px; height:88px; right:14px; bottom:14px; }
+  .battle-arena { height:420px; min-height:420px; }
+  .battle-side { width:175px; }
+  .battle-card { width:155px; height:240px; }
+  .battle-card canvas { width:130px; height:110px; }
+  .hpbox { width:155px; }
+  .vs { top:175px; font-size:38px; }
+}
+
+@media (max-height:560px) and (orientation:landscape) {
+  .battle-arena { height:360px; min-height:360px; }
+  .battle-card { height:215px; }
+  .battle-card canvas { height:85px; }
+  .battle-actions { margin-top:8px; }
+}
+
 </style>
 </head>
 <body>
@@ -118,8 +239,8 @@ input{font:700 18px Arial;background:#0f0d13;color:#fff;border:2px solid #4d4255
 // separate from CARD BATTLE, MULTIPLAYER, and RANK.
 // ================================================================
 
-const WIDTH = 1280;
-const HEIGHT = 720;
+let WIDTH = 1280;
+let HEIGHT = 720;
 
 const C = {
     WHITE:"#ffffff", BLACK:"#000000", RED:"#ff4545", DARK_RED:"#8e2020",
@@ -591,7 +712,38 @@ function buyRange(){if(save.candy_credits<20)return toast("NOT ENOUGH CANDY!");s
 // ================================================================
 // SOLO WAVES — EXACT IMPORTANT FORMULAS FROM main.py
 // ================================================================
+function setResponsiveWaveDimensions(){
+    // Keep the canvas coordinate system at the same aspect ratio as the visible screen.
+    // In portrait, the world becomes taller instead of stretching circles and characters.
+    const aspect = Math.max(0.25, Math.min(4, window.innerWidth / Math.max(1, window.innerHeight)));
+    WIDTH = 1280;
+    HEIGHT = Math.max(360, Math.round(WIDTH / aspect));
+
+    const canvas = document.getElementById("waveCanvas");
+    if(canvas){
+        if(canvas.width !== WIDTH) canvas.width = WIDTH;
+        if(canvas.height !== HEIGHT) canvas.height = HEIGHT;
+    }
+
+    if(typeof waveState !== "undefined" && waveState){
+        if(waveState.player){
+            waveState.player.x = Math.max(45, Math.min(WIDTH - 45, waveState.player.x));
+            waveState.player.y = Math.max(100, Math.min(HEIGHT - 70, waveState.player.y));
+        }
+        for(const enemy of (waveState.enemies || [])){
+            const r = Number(enemy.radius || 30);
+            enemy.x = Math.max(r + 5, Math.min(WIDTH - r - 5, enemy.x));
+            enemy.y = Math.max(110 + r, Math.min(HEIGHT - r - 25, enemy.y));
+        }
+        for(const pickup of (waveState.pickups || [])){
+            pickup.x = Math.max(20, Math.min(WIDTH - 20, pickup.x));
+            pickup.y = Math.max(100, Math.min(HEIGHT - 20, pickup.y));
+        }
+    }
+}
+
 function startWaves(){
+    setResponsiveWaveDimensions();
     currentMode="waves";
     ensureAudio();
 
@@ -611,7 +763,8 @@ function startWaves(){
     spawnWave(waveState.wave);
 }
 function renderWavePage(){
-    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="1280" height="720"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/50</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="shopPage()">SHOP</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
+    setResponsiveWaveDimensions();
+    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas><div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">Wave ${waveState.wave}/50</div><div class="txt" id="cardText">Cards ${countCards()}</div></div><div class="waveButtons"><button class="purple small" onclick="petsPage()">PETS</button><button class="blue small" onclick="cardsPage()">CARDS</button><button class="orange small" onclick="skinsPage()">SKIN</button><button class="gold small" onclick="shopPage()">SHOP</button><button class="gray small" onclick="pauseWaves()">||</button></div><div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div><button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
     const c=document.getElementById("waveCanvas");
     c.addEventListener("pointerdown",e=>{if(e.target===c)waveAttack();});
     document.getElementById("attackTouch").addEventListener("pointerdown",e=>{e.preventDefault();waveAttack();});
@@ -988,6 +1141,11 @@ function drawBoss(ctx,e){
 function setupJoystick(){const b=document.getElementById("joy"),k=document.getElementById("joyKnob");if(!b||!k)return;function move(e){if(!joystick.active)return;const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,m=45,len=Math.hypot(dx,dy);if(len>m){dx=dx/len*m;dy=dy/len*m;}joystick.x=dx/m;joystick.y=dy/m;k.style.transform=`translate(${dx}px,${dy}px)`;}b.addEventListener("pointerdown",e=>{joystick.active=true;b.setPointerCapture?.(e.pointerId);move(e)});b.addEventListener("pointermove",move);for(const ev of["pointerup","pointercancel"]){b.addEventListener(ev,()=>{joystick.active=false;joystick.x=0;joystick.y=0;k.style.transform="";});}}
 function setKey(e,on){keys[e.key.toLowerCase()]=on;if(e.code==="Space"&&on){if(currentMode==="waves")waveAttack();}}
 window.addEventListener("keydown",e=>setKey(e,true));window.addEventListener("keyup",e=>setKey(e,false));
+window.addEventListener("resize",()=>{
+    if(currentMode === "waves" && waveState){
+        setResponsiveWaveDimensions();
+    }
+});
 
 // ================================================================
 // CARD BATTLE — SEPARATE GAME MODE
