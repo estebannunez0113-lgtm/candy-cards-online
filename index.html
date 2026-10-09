@@ -1728,16 +1728,40 @@ function sendOnlineBattleAction(action){
     if(!sendMulti({type:"battle_action",room:onlineBattle.room,action}))toast("NOT CONNECTED!");
 }
 function finishOnlineBattle(msg){
-    if(!onlineBattle)return;
-    onlineBattle.over=true;
-    onlineBattle.log.push("BATTLE FINISHED: "+(msg.winner||"NO WINNER"));
+    // Ignore duplicate result packets so rewards cannot be granted twice.
+    if(!onlineBattle || onlineBattle.over) return;
+    onlineBattle.over = true;
+
+    // The server sends a player-specific result based on connection/player ID.
+    // Do NOT compare names: both players may use the same username.
+    const won = msg.youWon === true || msg.result === "win";
+    const lost = msg.youWon === false || msg.result === "loss";
+    const winnerName = msg.winner || "NO WINNER";
+
+    if(won){
+        onlineBattle.log.push("YOU WIN! +25 TROPHIES +15 CANDY");
+        save.wins++;
+        save.trophies += 25;
+        save.candy_credits += 15;
+    } else if(lost){
+        onlineBattle.log.push("YOU LOSE! -15 TROPHIES");
+        save.losses++;
+        save.trophies = Math.max(0, save.trophies - 15);
+    } else {
+        onlineBattle.log.push("BATTLE ENDED WITHOUT A WINNER");
+    }
+
     setNet("BATTLE FINISHED");
-    const winner=msg.winner||"";
-    if(winner===save.username){save.wins++;save.trophies+=25;save.candy_credits+=15;}
-    else if(winner){save.losses++;save.trophies=Math.max(0,save.trophies-15);}
     saveGame();
-    alert(winner===save.username?"YOU WIN! +25 TROPHIES +15 CANDY":"ONLINE BATTLE FINISHED");
-    onlineBattle=null;
+
+    const resultText = won
+        ? "YOU WIN!\n+25 TROPHIES\n+15 CANDY"
+        : lost
+            ? "YOU LOSE!\n-15 TROPHIES\nWinner: " + winnerName
+            : "BATTLE ENDED WITHOUT A WINNER";
+
+    alert(resultText);
+    onlineBattle = null;
     multiplayerPage();
 }
 function leaveOnlineBattle(){sendMulti({type:"leave_room"});onlineBattle=null;multiplayerPage();}
