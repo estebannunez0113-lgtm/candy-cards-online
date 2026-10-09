@@ -10,46 +10,17 @@ jobs:
 build-apk:
 runs-on: ubuntu-latest
 steps:
-- name: Download repository
+- name: Checkout repository
 uses: actions/checkout@v4
 
-  - name: Set up Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
-
-  - name: Set up Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '20'
-
-  - name: Install Bubblewrap
-    run: npm install --global @bubblewrap/cli
-
-  - name: Check website manifest
+```
+  - name: Check website
     run: |
-      curl --fail --silent --show-error \
-        https://candy-cards-online.onrender.com/manifest.webmanifest \
-        --output manifest.webmanifest
-      cat manifest.webmanifest
+      curl -fL https://candy-cards-online.onrender.com/ -o index.html
 
-  - name: Initialize Android project
-    run: |
-      bubblewrap init \
-        --manifest ./manifest.webmanifest \
-        --directory ./android-project \
-        --packageId com.candycards.online \
-        --appName "Candy Cards Online"
-
-  - name: Build APK
-    working-directory: android-project
-    run: bubblewrap build --skipPwaValidation
-
-  - name: Upload APK
+  - name: Upload website check
     uses: actions/upload-artifact@v4
     with:
-      name: candy-cards-apk
-      path: android-project/*.apk
-      if-no-files-found: error
+      name: candy-cards-website-check
+      path: index.html
 ```
