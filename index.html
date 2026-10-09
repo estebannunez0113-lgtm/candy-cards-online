@@ -359,7 +359,12 @@ const CANDY_CARDS = [
 ["Ultimate Lollipop","OP"],["Ultimate Broccoli","OP"],["Ultimate Steak","OP"],
 ["OP Candy Dragon","OP"],["OP Sugar King","OP"],["OP Rainbow God","OP"],
 ["Original Candy God","OC"],["Original Lollipop God","OC"],["Original Broccoli God","OC"],
-["Original Steak God","OC"],["Original Rainbow God","OC"],["Original Sugar God","OC"]
+["Original Steak God","OC"],["Original Rainbow God","OC"],["Original Sugar God","OC"],
+["Comet Candy Fox","Rare"],["Nebula Nougat","Epic"],["Solar Lollipop Knight","Legendary"],
+["Moonlight Macaron","Mythic"],["Prism Phoenix","Secret"],["Black Hole Bonbon","Exotic"],
+["Supernova Sugar Dragon","OP"],["Eternal Candy Creator","OC"],["Aurora Jellyfish","Epic"],
+["Meteor Cookie Titan","Legendary"],["Quantum Gumdrop","Mythic"],["Starlight Candy Guardian","Secret"],
+["Galactic Chipy Champion","OP"],["Rainbow Nebula God","OC"],["Cosmic Cupcake","Uncommon"]
 ];
 
 const PETS = [
@@ -397,7 +402,15 @@ const PETS = [
 {name:"Swedish Fish",rarity:"Rare",damage:5,speed:.40,range:10,credits:2},
 {name:"Melting Chocolate",rarity:"Epic",damage:12,speed:.50,range:15,credits:3},
 {name:"Caramel Apple",rarity:"OC",damage:100,speed:2.50,range:80,credits:25},
-{name:"Chipy",rarity:"ULTRA SECRET",damage:1500,speed:100,range:100,credits:70,drop_chance:0.0000000000000001}
+{name:"Chipy",rarity:"ULTRA SECRET",damage:1500,speed:100,range:100,credits:70,drop_chance:0.0000000000000001},
+{name:"Comet Kitten",rarity:"Rare",damage:6,speed:.75,range:12,credits:3},
+{name:"Nebula Axolotl",rarity:"Epic",damage:14,speed:.90,range:20,credits:4},
+{name:"Prism Dragonling",rarity:"Legendary",damage:24,speed:1.15,range:28,credits:6},
+{name:"Moon Mochi",rarity:"Mythic",damage:32,speed:1.45,range:35,credits:8},
+{name:"Supernova Owl",rarity:"Secret",damage:48,speed:1.75,range:45,credits:10},
+{name:"Black Hole Bunny",rarity:"Exotic",damage:62,speed:1.90,range:55,credits:13},
+{name:"Aurora Fox",rarity:"OP",damage:85,speed:2.15,range:70,credits:18},
+{name:"Cosmic Chipy Echo",rarity:"OC",damage:135,speed:2.70,range:95,credits:32}
 ];
 
 const SKINS = [
@@ -1071,7 +1084,11 @@ function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>
 const GEM_BUNDLES=[
  {id:"starter",name:"SWEET STARTER",cost:60,desc:"500 candy + 3 card packs",candy:500,packs:3,pets:0},
  {id:"royal",name:"ROYAL TREAT",cost:150,desc:"1,500 candy + 5 card packs + 2 bonus pets",candy:1500,packs:5,pets:2},
- {id:"mythic",name:"MYTHIC FEAST",cost:350,desc:"4,000 candy + 10 card packs + 5 bonus pets",candy:4000,packs:10,pets:5}
+ {id:"mythic",name:"MYTHIC FEAST",cost:350,desc:"4,000 candy + 10 card packs + 5 bonus pets",candy:4000,packs:10,pets:5},
+ {id:"cosmic",name:"COSMIC TREASURE",cost:500,desc:"7,500 candy + 12 card packs + 8 bonus pets",candy:7500,packs:12,pets:8},
+ {id:"collector",name:"CARD COLLECTOR CRATE",cost:275,desc:"2,000 candy + 18 card packs",candy:2000,packs:18,pets:2},
+ {id:"petparade",name:"PET PARADE",cost:225,desc:"1,000 candy + 12 bonus pets + 4 card packs",candy:1000,packs:4,pets:12},
+ {id:"gemvault",name:"GALAXY VAULT",cost:850,desc:"15,000 candy + 25 card packs + 15 bonus pets",candy:15000,packs:25,pets:15}
 ];
 const GEM_COSMETICS=[
  {id:"rainbow",name:"Rainbow Aura",cost:45,color:"#ff66d9",desc:"A colorful rainbow ring around your lollipop"},
@@ -1079,7 +1096,15 @@ const GEM_COSMETICS=[
  {id:"golden",name:"Golden Aura",cost:120,color:"#ffd84a",desc:"A shiny golden halo"},
  {id:"toxic",name:"Toxic Aura",cost:75,color:"#75ff58",desc:"A bright green glow"},
  {id:"diamond",name:"Diamond Aura",cost:180,color:"#72efff",desc:"A cool diamond-blue ring"},
- {id:"chipy",name:"Chipy Badge",cost:100,color:"#ffbf4a",desc:"A special Chipy badge and golden aura"}
+ {id:"chipy",name:"Chipy Badge",cost:100,color:"#ffbf4a",desc:"A special Chipy badge and golden aura"},
+ {id:"comet",name:"Comet Trail",cost:85,color:"#63eaff",desc:"A bright blue comet trail follows your lollipop"},
+ {id:"nebula",name:"Nebula Pulse",cost:140,color:"#bc75ff",desc:"A pulsing violet space aura"},
+ {id:"aurora",name:"Aurora Glow",cost:160,color:"#62ffbf",desc:"Northern-light green and cyan glow"},
+ {id:"supernova",name:"Supernova Burst",cost:240,color:"#ff9a45",desc:"A fiery orange starburst aura"},
+ {id:"prism",name:"Prismatic Halo",cost:300,color:"#ff72e1",desc:"A shifting rainbow-style prismatic halo"},
+ {id:"blackhole",name:"Black Hole Ring",cost:400,color:"#8b73ff",desc:"A deep cosmic ring with a bright violet edge"},
+ {id:"sugarfire",name:"Sugarfire Aura",cost:210,color:"#ff5572",desc:"A candy-red flame glow"},
+ {id:"stardust",name:"Stardust Sparkles",cost:125,color:"#fff18a",desc:"Golden stardust shimmer"}
 ];
 function shopPage(){
     currentMode="gem-shop";
@@ -1952,7 +1977,7 @@ function redeemSecretCode(){
     if(!input||!message)return;
     const code=String(input.value||"").trim().toLowerCase();
     if(!code){message.textContent="ENTER A SECRET CODE FIRST.";sfxError();return;}
-    const validCodes=["12chipy34","admin","rich"];
+    const validCodes=["12chipy34","admin","rich","galaxy","gemstorm","cardparty","petparty","candyboost","cosmicchipy","collector","aurora2026"];
     if(!validCodes.includes(code)){message.textContent="INVALID CODE.";sfxError();return;}
     if(!Array.isArray(save.redeemed_codes))save.redeemed_codes=[];
     if(save.redeemed_codes.includes(code)){message.textContent="THIS CODE HAS ALREADY BEEN REDEEMED.";sfxError();return;}
@@ -1973,6 +1998,33 @@ function redeemSecretCode(){
         save.candy_credits+=10000;
         save.candy_gems=(Number(save.candy_gems)||0)+6000;
         result="ADMIN CODE REDEEMED! ALL CARDS, PETS AND WAVES UNLOCKED. +10,000 CANDY CREDITS AND +6,000 CANDY GEMS.";
+    }else if(code==="galaxy"){
+        save.candy_gems=(Number(save.candy_gems)||0)+250;
+        save.candy_credits+=1500;
+        result="GALAXY CODE! +250 GEMS AND +1,500 CANDY.";
+    }else if(code==="gemstorm"){
+        save.candy_gems=(Number(save.candy_gems)||0)+1000;
+        result="GEMSTORM! +1,000 CANDY GEMS.";
+    }else if(code==="cardparty"||code==="collector"){
+        const packCount=code==="cardparty"?8:15;
+        for(let i=0;i<packCount;i++){const c1=randomCard(),c2=randomCard(),p=rollPet();save.cards_owned[c1[0]]=(save.cards_owned[c1[0]]||0)+1;save.cards_owned[c2[0]]=(save.cards_owned[c2[0]]||0)+1;save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}
+        result=(code==="cardparty"?"CARD PARTY!":"COLLECTOR CODE!")+" +"+(packCount*2)+" CARDS AND +"+packCount+" PETS.";
+    }else if(code==="petparty"){
+        const pool=PETS.filter(p=>p.name!=="Chipy");
+        for(let i=0;i<12;i++){const p=pool[Math.floor(Math.random()*pool.length)];save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}
+        result="PET PARTY! +12 RANDOM PETS.";
+    }else if(code==="candyboost"){
+        save.candy_credits+=10000;
+        result="CANDY BOOST! +10,000 CANDY.";
+    }else if(code==="cosmicchipy"){
+        save.pets_owned["Chipy"]=Math.max(1,Number(save.pets_owned["Chipy"]||0));
+        save.pets_owned["Cosmic Chipy Echo"]=Math.max(1,Number(save.pets_owned["Cosmic Chipy Echo"]||0));
+        save.candy_gems=(Number(save.candy_gems)||0)+150;
+        result="COSMIC CHIPY! CHIPY + COSMIC CHIPY ECHO UNLOCKED AND +150 GEMS.";
+    }else if(code==="aurora2026"){
+        save.candy_gems=(Number(save.candy_gems)||0)+300;
+        for(const id of ["aurora","stardust"]){if(!save.owned_cosmetics.includes(id))save.owned_cosmetics.push(id);}
+        result="AURORA 2026! +300 GEMS AND AURORA + STARDUST COSMETICS.";
     }
     save.redeemed_codes.push(code);
     saveGame();
