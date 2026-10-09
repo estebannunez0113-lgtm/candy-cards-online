@@ -1,18 +1,15 @@
+
 name: Candy Cards APK Build
 
 'on': [push, workflow_dispatch]
 
 jobs:
-test:
-runs-on: ubuntu-latest
-steps:
-- name: Checkout repository
-uses: actions/checkout@v4
-
-```
-  - name: Test website
-    run: curl -fL https://candy-cards-online.onrender.com/ -o index.html
-
-  - name: Confirm success
-    run: 'echo "Candy Cards website check passed!"'
-```
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Test website
+        run: curl -fL https://candy-cards-online.onrender.com/ -o index.html
+      - name: Confirm success
+        run: echo "Candy Cards website check passed!"
