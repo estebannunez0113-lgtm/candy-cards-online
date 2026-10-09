@@ -39,6 +39,16 @@ canvas.game{display:block;width:100%;height:100%;touch-action:none}
 .og-lollipop .shine{position:absolute;left:30px;top:25px;width:23px;height:23px;background:#ffbcbc;border-radius:50%;opacity:.9}
 .og-buttons{position:absolute;left:50%;top:350px;transform:translateX(-50%);width:min(300px,72vw);display:flex;flex-direction:column;gap:15px}
 .og-buttons button{height:55px}
+/* Main menu adjustments to keep the extra wave-picker button visible. */
+.og-lollipop{top:178px}
+.og-buttons{top:345px;gap:7px;width:min(320px,78vw)}
+.og-buttons button{height:43px;min-height:40px;font-size:18px;padding:5px 12px}
+.wave-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px;margin:14px 0 34px}
+.wave-pick{min-width:0;min-height:47px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;background:#242033;border-color:#554763;font-size:15px;line-height:1.1;overflow-wrap:anywhere}
+.wave-pick.is-boss{background:#30271a;border-color:#e5b63c;color:#fff1a6}
+.wave-pick small{font-size:10px;line-height:1.1;font-weight:800;color:#fff0bc;overflow-wrap:anywhere}
+.wave-picker-empty{padding:24px;text-align:center;font-weight:800;color:#e0d9ed}
+@media(max-width:720px){.og-lollipop{top:175px}.og-buttons{top:300px;gap:5px;width:min(320px,80vw)}.og-buttons button{height:39px;min-height:36px;font-size:15px;padding:4px 8px}.og-info{font-size:11px;bottom:4px}.wave-select-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px}.wave-pick{font-size:13px;min-height:43px}.wave-pick small{font-size:9px}}
 .og-info{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);color:#d4d0dc;font-size:18px;text-align:center;white-space:nowrap}
 .lang-top .language-select{font-size:13px;padding:6px 8px}
 .topbar{height:78px;display:flex;align-items:center;gap:10px;padding:12px;background:#14121d;border-bottom:2px solid #4b3b59;position:sticky;top:0;z-index:20}
@@ -419,7 +429,7 @@ const RANKS = [
 ];
 
 const DEFAULT_SAVE = {
-    candy_credits:0,current_wave:1,player_max_health:100,player_health:100,
+    candy_credits:0,current_wave:1,highest_wave_cleared:0,player_max_health:100,player_health:100,
     player_damage:20,player_speed:5.0,player_attack_range:95,
     health_level:0,damage_level:0,speed_level:0,range_level:0,
     cards_owned:{},pets_owned:{},equipped_pet:null,equipped_skin:"Classic Lollipop",
@@ -490,6 +500,12 @@ function loadSave(){
         if(!out.current_wave && parsed.wave) out.current_wave=parsed.wave;
         if(!Number.isFinite(Number(out.player_health))) out.player_health=out.player_max_health||100;
         out.current_wave=Math.max(1,Math.min(MAX_WAVES,Math.floor(Number(out.current_wave)||1)));
+        if(Object.prototype.hasOwnProperty.call(parsed,"highest_wave_cleared") && Number.isFinite(Number(parsed.highest_wave_cleared))){
+            out.highest_wave_cleared=Math.max(0,Math.min(MAX_WAVES,Math.floor(Number(parsed.highest_wave_cleared))));
+        }else{
+            // Older saves store the next wave to play, so the previous wave was cleared.
+            out.highest_wave_cleared=Math.max(0,Math.min(MAX_WAVES,out.current_wave-1));
+        }
         out.cards_owned=(out.cards_owned&&typeof out.cards_owned==="object")?out.cards_owned:{};
         out.pets_owned=(out.pets_owned&&typeof out.pets_owned==="object")?out.pets_owned:{};
         return out;
@@ -504,6 +520,11 @@ function pet(name){return PETS.find(p=>p.name===name)||null;}
 function currentRank(){return RANKS.find(r=>save.trophies>=r.min&&save.trophies<=r.max)||RANKS[0];}
 function countCards(){return CANDY_CARDS.filter(c=>Number(save.cards_owned[c[0]]||0)>0).length;}
 function countPets(){return PETS.filter(p=>Number(save.pets_owned[p.name]||0)>0).length;}
+function highestWaveCleared(){
+    const recorded=Math.max(0,Math.floor(Number(save.highest_wave_cleared)||0));
+    const inferred=Math.max(0,Math.floor(Number(save.current_wave)||1)-1);
+    return Math.min(MAX_WAVES,Math.max(recorded,inferred));
+}
 function sanitize(){for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(0,Math.floor(Number(save.cards_owned[c[0]]||0)));for(const p of PETS)save.pets_owned[p.name]=Math.max(0,Math.floor(Number(save.pets_owned[p.name]||0)));}
 sanitize();
 if(!save.equipped_pet && localStorage.getItem("equipped_pet")) save.equipped_pet=localStorage.getItem("equipped_pet");
@@ -512,7 +533,7 @@ const LANGUAGES = {
     en:{name:"English", strings:{}},
     es:{name:"Español", strings:{
         "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"PIRULETA VS COMIDA","CANDY CARDS + PETS":"CARTAS DE CARAMELOS + MASCOTAS",
-        "PLAY":"JUGAR","CARDS":"CARTAS","PETS":"MASCOTAS","SKINS":"ASPECTOS","BATTLE":"BATALLA","MULTIPLAYER":"MULTIJUGADOR","RANK":"RANGO","HOW TO PLAY":"CÓMO JUGAR",
+        "PLAY":"JUGAR","CARDS":"CARTAS","PETS":"MASCOTAS","SKINS":"ASPECTOS","BATTLE":"BATALLA","MULTIPLAYER":"MULTIJUGADOR","RANK":"RANGO","HOW TO PLAY":"CÓMO JUGAR","CHOOSE WAVE":"ELEGIR OLEADA","CHOOSE A WAVE YOU CLEARED":"ELIGE UNA OLEADA QUE YA SUPERASTE","HIGHEST CLEARED":"MÁXIMA SUPERADA","ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.":"SOLO PUEDES ELEGIR OLEADAS QUE YA SUPERASTE. REJUGAR NO BORRA TU PROGRESO.","NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.":"TODAVÍA NO HAS SUPERADO NINGUNA OLEADA. COMPLETA LA OLEADA 1 PRIMERO.","CONTINUE CAMPAIGN":"CONTINUAR CAMPAÑA","BOSS":"JEFE",
         "CANDY SHOP":"TIENDA DE CARAMELOS","SETTINGS":"AJUSTES","CREDITS":"CRÉDITOS","BACK":"ATRÁS","MENU":"MENÚ","CONTINUE":"CONTINUAR",
         "OPEN PACK — 10 CANDY":"ABRIR PAQUETE — 10 CARAMELOS","CANDY CARDS":"CARTAS DE CARAMELOS","CARD BATTLE":"BATALLA DE CARTAS","ONLINE MULTIPLAYER":"MULTIJUGADOR EN LÍNEA",
         "CREATE ROOM":"CREAR SALA","JOIN ROOM":"UNIRSE A SALA","FIND PLAYER":"BUSCAR JUGADOR","START BATTLE":"INICIAR BATALLA","CHOOSE CARD":"ELEGIR CARTA",
@@ -527,7 +548,7 @@ const LANGUAGES = {
     }},
     fr:{name:"Français", strings:{
         "DEVICE":"APPAREIL","LOLLIPOP VS FOOD":"LOLLIPOP CONTRE NOURRITURE","CANDY CARDS + PETS":"CARTES DE BONBONS + FAMILIERS",
-        "PLAY":"JOUER","CARDS":"CARTES","PETS":"FAMILIERS","SKINS":"APPARENCES","BATTLE":"COMBAT","MULTIPLAYER":"MULTIJOUEUR","RANK":"RANG","HOW TO PLAY":"COMMENT JOUER",
+        "PLAY":"JOUER","CARDS":"CARTES","PETS":"FAMILIERS","SKINS":"APPARENCES","BATTLE":"COMBAT","MULTIPLAYER":"MULTIJOUEUR","RANK":"RANG","HOW TO PLAY":"COMMENT JOUER","CHOOSE WAVE":"CHOISIR UNE VAGUE","CHOOSE A WAVE YOU CLEARED":"CHOISISSEZ UNE VAGUE TERMINÉE","HIGHEST CLEARED":"PLUS HAUTE VAGUE TERMINÉE","ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.":"SEULES LES VAGUES TERMINÉES SONT DISPONIBLES. REJOUER NE RÉINITIALISE PAS LA CAMPAGNE.","NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.":"AUCUNE VAGUE TERMINÉE. TERMINEZ D ABORD LA VAGUE 1.","CONTINUE CAMPAIGN":"CONTINUER LA CAMPAGNE","BOSS":"BOSS",
         "CANDY SHOP":"BOUTIQUE DE BONBONS","SETTINGS":"PARAMÈTRES","CREDITS":"CRÉDITS","BACK":"RETOUR","MENU":"MENU","CONTINUE":"CONTINUER",
         "OPEN PACK — 10 CANDY":"OUVRIR UN PAQUET — 10 BONBONS","CANDY CARDS":"CARTES DE BONBONS","CARD BATTLE":"COMBAT DE CARTES","ONLINE MULTIPLAYER":"MULTIJOUEUR EN LIGNE",
         "CREATE ROOM":"CRÉER UNE SALLE","JOIN ROOM":"REJOINDRE UNE SALLE","FIND PLAYER":"CHERCHER UN JOUEUR","START BATTLE":"COMMENCER LE COMBAT","CHOOSE CARD":"CHOISIR UNE CARTE",
@@ -541,7 +562,7 @@ const LANGUAGES = {
     }},
     de:{name:"Deutsch", strings:{
         "DEVICE":"GERÄT","LOLLIPOP VS FOOD":"LOLLIPOP GEGEN ESSEN","CANDY CARDS + PETS":"BONBONKARTEN + HAUSTIERE",
-        "PLAY":"SPIELEN","CARDS":"KARTEN","PETS":"HAUSTIERE","SKINS":"SKINS","BATTLE":"KAMPF","MULTIPLAYER":"MEHRSPIELER","RANK":"RANG","HOW TO PLAY":"SPIELANLEITUNG",
+        "PLAY":"SPIELEN","CARDS":"KARTEN","PETS":"HAUSTIERE","SKINS":"SKINS","BATTLE":"KAMPF","MULTIPLAYER":"MEHRSPIELER","RANK":"RANG","HOW TO PLAY":"SPIELANLEITUNG","CHOOSE WAVE":"WELLE WÄHLEN","CHOOSE A WAVE YOU CLEARED":"WÄHLE EINE BEREITS GESCHAFFTE WELLE","HIGHEST CLEARED":"HÖCHSTE GESCHAFFTE WELLE","ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.":"NUR BEREITS GESCHAFFTE WELLEN SIND FREIGESCHALTET. WIEDERHOLEN SETZT DEN FORTSCHRITT NICHT ZURÜCK.","NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.":"NOCH KEINE WELLE GESCHAFFT. SCHLIESSE ZUERST WELLE 1 AB.","CONTINUE CAMPAIGN":"KAMPAGNE FORTSETZEN","BOSS":"BOSS",
         "CANDY SHOP":"BONBON-SHOP","SETTINGS":"EINSTELLUNGEN","CREDITS":"CREDITS","BACK":"ZURÜCK","MENU":"MENÜ","CONTINUE":"WEITER",
         "OPEN PACK — 10 CANDY":"PAKET ÖFFNEN — 10 BONBONS","CANDY CARDS":"BONBONKARTEN","CARD BATTLE":"KARTENKAMPF","ONLINE MULTIPLAYER":"ONLINE-MEHRSPIELER",
         "CREATE ROOM":"RAUM ERSTELLEN","JOIN ROOM":"RAUM BEITRETEN","FIND PLAYER":"SPIELER SUCHEN","START BATTLE":"KAMPF STARTEN","CHOOSE CARD":"KARTE WÄHLEN",
@@ -555,7 +576,7 @@ const LANGUAGES = {
     }},
     pt:{name:"Português", strings:{
         "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"PIRULITO VS COMIDA","CANDY CARDS + PETS":"CARTAS DE DOCES + PETS",
-        "PLAY":"JOGAR","CARDS":"CARTAS","PETS":"PETS","SKINS":"SKINS","BATTLE":"BATALHA","MULTIPLAYER":"MULTIJOGADOR","RANK":"RANK","HOW TO PLAY":"COMO JOGAR",
+        "PLAY":"JOGAR","CARDS":"CARTAS","PETS":"PETS","SKINS":"SKINS","BATTLE":"BATALHA","MULTIPLAYER":"MULTIJOGADOR","RANK":"RANK","HOW TO PLAY":"COMO JOGAR","CHOOSE WAVE":"ESCOLHER ONDA","CHOOSE A WAVE YOU CLEARED":"ESCOLHA UMA ONDA QUE JÁ PASSOU","HIGHEST CLEARED":"MAIOR ONDA CONCLUÍDA","ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.":"SÓ PODE ESCOLHER ONDAS CONCLUÍDAS. REJOGAR NÃO APAGA SEU PROGRESSO.","NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.":"NENHUMA ONDA CONCLUÍDA. COMPLETE A ONDA 1 PRIMEIRO.","CONTINUE CAMPAIGN":"CONTINUAR CAMPANHA","BOSS":"CHEFE",
         "CANDY SHOP":"LOJA DE DOCES","SETTINGS":"CONFIGURAÇÕES","CREDITS":"CRÉDITOS","BACK":"VOLTAR","MENU":"MENU","CONTINUE":"CONTINUAR",
         "OPEN PACK — 10 CANDY":"ABRIR PACOTE — 10 DOCES","CANDY CARDS":"CARTAS DE DOCES","CARD BATTLE":"BATALHA DE CARTAS","ONLINE MULTIPLAYER":"MULTIJOGADOR ONLINE",
         "CREATE ROOM":"CRIAR SALA","JOIN ROOM":"ENTRAR NA SALA","FIND PLAYER":"BUSCAR JOGADOR","START BATTLE":"INICIAR BATALHA","CHOOSE CARD":"ESCOLHER CARTA",
@@ -569,7 +590,7 @@ const LANGUAGES = {
     }},
     it:{name:"Italiano", strings:{
         "DEVICE":"DISPOSITIVO","LOLLIPOP VS FOOD":"LECCA-LECCA CONTRO CIBO","CANDY CARDS + PETS":"CARTE DI CARAMELLE + ANIMALI",
-        "PLAY":"GIOCA","CARDS":"CARTE","PETS":"ANIMALI","SKINS":"SKIN","BATTLE":"BATTAGLIA","MULTIPLAYER":"MULTIGIOCATORE","RANK":"RANGO","HOW TO PLAY":"COME GIOCARE",
+        "PLAY":"GIOCA","CARDS":"CARTE","PETS":"ANIMALI","SKINS":"SKIN","BATTLE":"BATTAGLIA","MULTIPLAYER":"MULTIGIOCATORE","RANK":"RANGO","HOW TO PLAY":"COME GIOCARE","CHOOSE WAVE":"SCEGLI ONDATA","CHOOSE A WAVE YOU CLEARED":"SCEGLI ONDATA GIA SUPERATA","HIGHEST CLEARED":"MASSIMA ONDATA SUPERATA","ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.":"PUOI SCEGLIERE SOLO ONDATE GIA SUPERATE. RIGIOCARE NON CANCELLA I PROGRESSI.","NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.":"NESSUNA ONDATA SUPERATA. COMPLETA PRIMA L ONDATA 1.","CONTINUE CAMPAIGN":"CONTINUA CAMPAGNA","BOSS":"BOSS",
         "CANDY SHOP":"NEGOZIO DI CARAMELLE","SETTINGS":"IMPOSTAZIONI","CREDITS":"CREDITI","BACK":"INDIETRO","MENU":"MENU","CONTINUE":"CONTINUA",
         "OPEN PACK — 10 CANDY":"APRI PACCHETTO — 10 CARAMELLE","CANDY CARDS":"CARTE DI CARAMELLE","CARD BATTLE":"BATTAGLIA DI CARTE","ONLINE MULTIPLAYER":"MULTIGIOCATORE ONLINE",
         "CREATE ROOM":"CREA STANZA","JOIN ROOM":"UNISCITI ALLA STANZA","FIND PLAYER":"CERCA GIOCATORE","START BATTLE":"INIZIA BATTAGLIA","CHOOSE CARD":"SCEGLI CARTA",
@@ -633,6 +654,7 @@ function menu(){
         <div class="og-lollipop"><div class="head"></div><div class="shine"></div><div class="stick"></div></div>
         <div class="og-buttons">
             <button class="green" onclick="startWaves()">PLAY</button>
+            <button class="gold" onclick="chooseWavePage()">CHOOSE WAVE</button>
             <button class="blue" onclick="cardsPage()">CARDS</button>
             <button class="purple" onclick="petsPage()">PETS</button>
             <button class="orange" onclick="skinsPage()">SKINS</button>
@@ -641,6 +663,18 @@ function menu(){
         <div class="og-info">Cards: ${countCards()}/${CANDY_CARDS.length} &nbsp;&nbsp; Pets: ${countPets()}/${PETS.length}</div>
     </div>`);
 }
+function chooseWavePage(){
+    currentMode="choose-wave";
+    const cleared=highestWaveCleared();
+    const waveButtons=cleared>0?Array.from({length:cleared},(_,i)=>{
+        const w=i+1;
+        const isBoss=w%5===0;
+        const bossLabel=isBoss?`<small>${esc(bossNameForWave(w))}</small>`:"";
+        return `<button class="wave-pick ${isBoss?"is-boss":""}" onclick="startWaves(${w})"><span>${isBoss?"BOSS · ":""}WAVE ${w}</span>${bossLabel}</button>`;
+    }).join(""):'<div class="wave-picker-empty">NO WAVES CLEARED YET. COMPLETE WAVE 1 FIRST.</div>';
+
+    render(`${topbar()}<div class="section wave-select-section"><h1>CHOOSE A WAVE YOU CLEARED</h1><div class="panel center"><h2>HIGHEST CLEARED: ${cleared}/${MAX_WAVES}</h2><p>ONLY WAVES YOU HAVE BEATEN ARE UNLOCKED. REPLAYING A WAVE WILL NOT ERASE CAMPAIGN PROGRESS.</p><div class="skill-row"><button class="green" onclick="startWaves()">CONTINUE CAMPAIGN — WAVE ${save.current_wave}</button><button class="gray" onclick="menu()">MENU</button></div></div><div class="wave-select-grid">${waveButtons}</div></div>`);
+}
 function detectDevice(){const w=innerWidth;return w<650?"PHONE":w<1000?"TABLET":"PC";}
 
 // ================================================================
@@ -648,7 +682,7 @@ function detectDevice(){const w=innerWidth;return w<650?"PHONE":w<1000?"TABLET":
 // ================================================================
 function howToPlayPage(){
     currentMode="how-to-play";
-    render(`${topbar()}<div class="howto-scroll"><div class="section"><h1>HOW TO PLAY</h1><div class="panel"><h2>PLAY / SOLO WAVES</h2><p>Move your lollipop around the arena and attack the food enemies. Defeat every enemy to clear the wave.</p><p><b>PC:</b> Use WASD or the arrow keys to move. Press SPACE to attack.</p><p><b>PHONE / TABLET:</b> Use the touch joystick to move and the ATTACK button to attack.</p></div><div class="panel"><h2>WAVES</h2><p>Normal waves spawn broccoli and steak enemies. Every 5th wave has a boss. A boss appears every 5th wave. Every boss from wave 55 through wave 300 has an individual name, color scheme, and custom look; bosses also get stronger as you advance.</p><p>Wave 50 is <b>THE CANDY APOCALYPSE</b>. Wave 300 is <b>THE ULTIMATE CANDY GOD</b>, the final boss.</p></div><div class="panel"><h2>CANDY CARDS</h2><p>Open packs for <b>2 cards + 1 pet</b>. Collected cards can be equipped for CARD BATTLE.</p></div><div class="panel"><h2>PETS</h2><p>Equip a pet from the PETS menu. Your equipped pet appears beside you during SOLO WAVES and gives its own bonuses.</p></div><div class="panel"><h2>CARD BATTLE</h2><p>Card Battle is separate from SOLO WAVES. Your card has DAMAGE at the top-left and HP at the top-right. Reduce the opponent card's HP to 0 to win.</p></div><div class="panel"><h2>MULTIPLAYER</h2><p>Multiplayer is a separate mode from Card Battle and Rank. Use the online room system to play with another player.</p></div><div class="panel"><h2>RANK</h2><p>Rank is separate from the wave game: Iron → Bronze → Gold → Platinum → Amethyst → Candy Champion.</p></div></div></div>`);
+    render(`${topbar()}<div class="howto-scroll"><div class="section"><h1>HOW TO PLAY</h1><div class="panel"><h2>PLAY / SOLO WAVES</h2><p>Move your lollipop around the arena and attack the food enemies. Defeat every enemy to clear the wave.</p><p><b>PC:</b> Use WASD or the arrow keys to move. Press SPACE to attack.</p><p><b>PHONE / TABLET:</b> Use the touch joystick to move and the ATTACK button to attack.</p></div><div class="panel"><h2>WAVES</h2><p>Use CHOOSE WAVE from the main menu to replay any wave you have already cleared. Replays never erase your campaign progress. Normal waves spawn broccoli and steak enemies. Every 5th wave has a boss. A boss appears every 5th wave. Every boss from wave 55 through wave 300 has an individual name, color scheme, and custom look; bosses also get stronger as you advance.</p><p>Wave 50 is <b>THE CANDY APOCALYPSE</b>. Wave 300 is <b>THE ULTIMATE CANDY GOD</b>, the final boss.</p></div><div class="panel"><h2>CANDY CARDS</h2><p>Open packs for <b>2 cards + 1 pet</b>. Collected cards can be equipped for CARD BATTLE.</p></div><div class="panel"><h2>PETS</h2><p>Equip a pet from the PETS menu. Your equipped pet appears beside you during SOLO WAVES and gives its own bonuses.</p></div><div class="panel"><h2>CARD BATTLE</h2><p>Card Battle is separate from SOLO WAVES. Your card has DAMAGE at the top-left and HP at the top-right. Reduce the opponent card's HP to 0 to win.</p></div><div class="panel"><h2>MULTIPLAYER</h2><p>Multiplayer is a separate mode from Card Battle and Rank. Use the online room system to play with another player.</p></div><div class="panel"><h2>RANK</h2><p>Rank is separate from the wave game: Iron → Bronze → Gold → Platinum → Amethyst → Candy Champion.</p></div></div></div>`);
 }
 
 // ================================================================
@@ -1004,20 +1038,30 @@ function setResponsiveWaveDimensions(){
     }
 }
 
-function startWaves(){
+function startWaves(requestedWave=null){
+    let selectedWave;
+    if(requestedWave!==null && requestedWave!==undefined){
+        selectedWave=Math.floor(Number(requestedWave));
+        if(!Number.isFinite(selectedWave)||selectedWave<1||selectedWave>highestWaveCleared()){
+            toast("YOU CAN ONLY REPLAY WAVES YOU HAVE CLEARED!");
+            sfxError();
+            return;
+        }
+    }else{
+        selectedWave=Math.max(1,Math.min(MAX_WAVES,Number(save.current_wave)||1));
+    }
     setResponsiveWaveDimensions();
     currentMode="waves";
     ensureAudio();
 
-    /* A previous Game Over saves HP at 0. Starting PLAY must always
-       revive the player to full HP instead of loading a dead player. */
+    /* A previous Game Over saves HP at 0. Starting any allowed wave must revive the player. */
     if(Number(save.player_health) <= 0){
         save.player_health = Number(save.player_max_health) || 100;
         saveGame();
     }
 
     waveState={
-        wave:Math.max(1,Math.min(MAX_WAVES,Number(save.current_wave)||1)),
+        wave:selectedWave,
         player:{x:WIDTH/2,y:HEIGHT/2,maxHealth:save.player_max_health,health:save.player_health,damage:save.player_damage,speed:save.player_speed,range:save.player_attack_range,cooldown:0},
         enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false
     };
@@ -1147,20 +1191,25 @@ function completeWave(){
     /* Save the actual HP left at the end of the wave, then apply the
        original 20% max-HP healing before the next wave. */
     save.player_health=Math.max(0,Math.min(save.player_max_health,Math.round(waveState.player.health)));
+    save.highest_wave_cleared=Math.max(highestWaveCleared(),w);
+    const previousProgress=Math.max(1,Math.floor(Number(save.current_wave)||1));
 
     if(w<MAX_WAVES){
-        save.current_wave=w+1;
+        // A replay must never push the campaign's next wave backwards.
+        save.current_wave=Math.max(previousProgress,w+1);
+        save.current_wave=Math.min(MAX_WAVES,save.current_wave);
         save.player_health=Math.min(
             save.player_max_health,
             save.player_health+Math.floor(save.player_max_health*.2)
         );
         saveGame();
 
-        const unlock=SKINS.find(s=>s[1]===save.current_wave);
+        const unlock=save.current_wave>previousProgress?SKINS.find(s=>s[1]===save.current_wave):null;
         if(unlock)toast("NEW SKIN UNLOCKED: "+unlock[0]+"!");
         setTimeout(()=>shopPage(),250);
     }else{
         save.current_wave=MAX_WAVES;
+        save.highest_wave_cleared=Math.max(save.highest_wave_cleared,MAX_WAVES);
         save.player_health=save.player_max_health;
         saveGame();
         setTimeout(()=>{
