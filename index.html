@@ -433,7 +433,8 @@ const DEFAULT_SAVE = {
     player_damage:20,player_speed:5.0,player_attack_range:95,
     health_level:0,damage_level:0,speed_level:0,range_level:0,
     cards_owned:{},pets_owned:{},equipped_pet:null,equipped_skin:"Classic Lollipop",
-    equipped_card:null,username:"CandyPlayer",trophies:0,wins:0,losses:0
+    equipped_card:null,username:"CandyPlayer",trophies:0,wins:0,losses:0,
+    redeemed_codes:[]
 };
 
 let save = loadSave();
@@ -508,6 +509,7 @@ function loadSave(){
         }
         out.cards_owned=(out.cards_owned&&typeof out.cards_owned==="object")?out.cards_owned:{};
         out.pets_owned=(out.pets_owned&&typeof out.pets_owned==="object")?out.pets_owned:{};
+        out.redeemed_codes=Array.isArray(out.redeemed_codes)?out.redeemed_codes.map(x=>String(x).toLowerCase()):[];
         return out;
     }catch{return clone(DEFAULT_SAVE);}
 }
@@ -989,9 +991,9 @@ function paintPetCanvases(){
 // ================================================================
 function skinsPage(){
     currentMode="skins";
-    render(`${topbar()}<div class="section"><h1>SKINS</h1><div class="panel center">Skins unlock as your SOLO WAVE advances.</div><div class="skin-grid">${SKINS.map(s=>{const unlocked=save.current_wave>=s[1],eq=save.equipped_skin===s[0];return `<div class="skin-box"><div style="font-size:50px">🍭</div><h2>${esc(s[0])}</h2><p>UNLOCKS AT WAVE ${s[1]}</p><button ${unlocked?"":"disabled"} class="${eq?"gold":"orange"}" onclick="equipSkin('${encodeURIComponent(s[0])}')">${eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED"}</button></div>`;}).join("")}</div></div>`);
+    render(`${topbar()}<div class="section"><h1>SKINS</h1><div class="panel center">Skins unlock as your SOLO WAVE advances.</div><div class="skin-grid">${SKINS.map(s=>{const unlocked=highestWaveCleared()>=s[1]||save.current_wave>=s[1],eq=save.equipped_skin===s[0];return `<div class="skin-box"><div style="font-size:50px">🍭</div><h2>${esc(s[0])}</h2><p>UNLOCKS AT WAVE ${s[1]}</p><button ${unlocked?"":"disabled"} class="${eq?"gold":"orange"}" onclick="equipSkin('${encodeURIComponent(s[0])}')">${eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED"}</button></div>`;}).join("")}</div></div>`);
 }
-function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n);if(!s||save.current_wave<s[1])return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
+function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n);if(!s||(highestWaveCleared()<s[1]&&save.current_wave<s[1]))return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
 
 // ================================================================
 // SHOP
@@ -1778,7 +1780,55 @@ function rankPage(){
 // EXTRA MENU — NEW MODES ARE ADDED WITHOUT REPLACING OG PLAY
 // ================================================================
 function mainMenuExtras(){
-    const modal=document.createElement("div");modal.className="modal";modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button></div><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;document.body.appendChild(modal);}
+    const modal=document.createElement("div");
+    modal.className="modal";
+    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button></div><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    document.body.appendChild(modal);
+}
+
+function openSecretCode(){
+    const modal=document.createElement("div");
+    modal.className="modal";
+    modal.innerHTML=`<div class="modal-box" style="max-width:520px"><h1>SECRET CODE</h1><p>Enter a code to unlock a reward.</p><form class="form" onsubmit="event.preventDefault();redeemSecretCode()"><input id="secretCodeInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" placeholder="ENTER SECRET CODE" aria-label="Secret code" style="width:min(330px,90%)"><button class="purple" type="submit">REDEEM</button></form><p id="secretCodeMessage" role="status" aria-live="polite" style="min-height:24px;font-weight:900;color:#ffe45c"></p><div class="skill-row"><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div></div>`;
+    document.body.appendChild(modal);
+    const input=modal.querySelector("#secretCodeInput");
+    if(input) input.focus();
+}
+
+function redeemSecretCode(){
+    const input=document.getElementById("secretCodeInput");
+    const message=document.getElementById("secretCodeMessage");
+    if(!input||!message)return;
+    const code=String(input.value||"").trim().toLowerCase();
+    if(!code){message.textContent="ENTER A SECRET CODE FIRST.";sfxError();return;}
+    const validCodes=["12chipy34","admin","rich"];
+    if(!validCodes.includes(code)){message.textContent="INVALID CODE.";sfxError();return;}
+    if(!Array.isArray(save.redeemed_codes))save.redeemed_codes=[];
+    if(save.redeemed_codes.includes(code)){message.textContent="THIS CODE HAS ALREADY BEEN REDEEMED.";sfxError();return;}
+
+    let result="";
+    if(code==="12chipy34"){
+        save.pets_owned["Chipy"]=Math.max(1,Number(save.pets_owned["Chipy"]||0));
+        result="CHIPY UNLOCKED! OPEN PETS TO EQUIP HIM.";
+    }else if(code==="rich"){
+        save.candy_credits+=2000;
+        result="RICH CODE REDEEMED! +2,000 CANDY CREDITS.";
+    }else if(code==="admin"){
+        // Unlock all collection content and all replayable waves/skins.
+        for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
+        for(const p of PETS)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));
+        save.highest_wave_cleared=MAX_WAVES;
+        save.candy_credits+=10000;
+        result="ADMIN CODE REDEEMED! ALL CARDS, PETS, WAVES AND SKINS UNLOCKED. +10,000 CANDY CREDITS.";
+    }
+    save.redeemed_codes.push(code);
+    saveGame();
+    sfxCollect();
+    // Refresh the modal-free menu so candy and collection totals update immediately.
+    document.querySelectorAll(".modal").forEach(m=>m.remove());
+    menu();
+    toast(result);
+}
 
 // Add a small "new modes" control without changing the original four OG buttons.
 // It is positioned at the bottom-left so DEVICE remains in the corner.
