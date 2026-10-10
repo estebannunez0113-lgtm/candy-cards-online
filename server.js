@@ -42,6 +42,7 @@ async function ensurePaymentSchema(){
         gems INTEGER NOT NULL, amount_cents INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ
       );
+      ALTER TABLE candy_gem_purchase_orders ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
       CREATE INDEX IF NOT EXISTS candy_gem_orders_player_idx
         ON candy_gem_purchase_orders(player_id,created_at DESC);
       CREATE TABLE IF NOT EXISTS candy_gem_subscriptions(
@@ -91,7 +92,7 @@ async function recordGemSubscriptionSession(session){
          WHERE candy_gem_subscriptions.player_id=EXCLUDED.player_id AND candy_gem_subscriptions.package_id=EXCLUDED.package_id`,
         [subId,playerId,product.id]
     );
-    await pool.query("UPDATE candy_gem_purchase_orders SET status='subscription_created' WHERE session_id=$1",[session.id]);
+    await pool.query("UPDATE candy_gem_purchase_orders SET status='subscription_created',stripe_subscription_id=$2 WHERE session_id=$1",[session.id,subId]);
 }
 
 async function fulfillPaidGemInvoice(invoice){
@@ -183,10 +184,15 @@ async function handlePaymentApi(req,res,pathname){
     if(pathname==='/api/purchase/status'&&req.method==='GET'){
         const u=new URL(req.url,'http://localhost'),playerId=u.searchParams.get('playerId')||'',sessionId=u.searchParams.get('sessionId')||'';
         if(!validPlayerId(playerId)||!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)){sendJson(res,400,{error:'Invalid purchase lookup.'});return;}
-        const r=await pool.query('SELECT gems,status FROM candy_gem_purchase_orders WHERE session_id=$1 AND player_id=$2',[sessionId,playerId]);
+        const r=await pool.query('SELECT gems,status,stripe_subscription_id FROM candy_gem_purchase_orders WHERE session_id=$1 AND player_id=$2',[sessionId,playerId]);
         if(!r.rows.length){sendJson(res,404,{status:'pending'});return;}
+        let status=r.rows[0].status;
+        if(status==='subscription_created'&&r.rows[0].stripe_subscription_id){
+            const paid=await pool.query('SELECT 1 FROM candy_gem_subscription_invoices WHERE stripe_subscription_id=$1 LIMIT 1',[r.rows[0].stripe_subscription_id]);
+            if(paid.rows.length)status='fulfilled';
+        }
         const w=await pool.query('SELECT paid_gems FROM candy_paid_gem_wallets WHERE player_id=$1',[playerId]);
-        sendJson(res,200,{status:r.rows[0].status==='subscription_created'?'fulfilled':r.rows[0].status,gems:Number(r.rows[0].gems),paidGems:Number(w.rows[0]?.paid_gems||0)});return;
+        sendJson(res,200,{status,gems:Number(r.rows[0].gems),paidGems:Number(w.rows[0]?.paid_gems||0)});return;
     }
     if(pathname==='/api/paid-gems/spend'&&req.method==='POST'){
         const raw=await readRequestBody(req);let body;
