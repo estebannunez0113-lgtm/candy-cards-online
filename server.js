@@ -111,9 +111,9 @@ async function handlePaymentApi(req,res,pathname){
             webhookSecretPresent:Boolean(STRIPE_WEBHOOK_SECRET.trim()),
             webhookSecretFormat:/^whsec_/.test(STRIPE_WEBHOOK_SECRET),
             databaseUrlPresent:Boolean((process.env.DATABASE_URL||'').trim()),
-            databaseUrlFormat:/^postgres(?:ql)?:\\/\\//i.test(process.env.DATABASE_URL||''),
+            databaseUrlFormat:/^postgres(?:ql)?:\/\//i.test(process.env.DATABASE_URL||''),
             appBaseUrlPresent:Boolean(APP_BASE_URL),
-            appBaseUrlFormat:/^https:\\/\\//i.test(APP_BASE_URL)
+            appBaseUrlFormat:/^https:\/\//i.test(APP_BASE_URL)
         };
         sendJson(res,200,{enabled:paymentsConfigured(),diagnostics,currency:'USD',packages:Object.values(USD_GEM_PACKAGES).map(p=>({id:p.id,name:p.name,gems:p.gems,priceCents:p.amount}))});return;
     }
