@@ -372,7 +372,8 @@ const CANDY_CARDS = [
 ["Secret Sugar Guardian","Secret"],["Exotic Steak Pop","Exotic"],["Exotic Veggie Feast","Exotic"],
 ["OP Candy Titan","OP"],["Origin Steak God","OC"],["Original Food God","OC"],
 ["Turbo Prism","Rare"],["Flame Choco Knight","Epic"],["Frost Ninja","Epic"],
-["Galaxy Sweetstorm","Mythic"],["Quantum Star Guardian","Secret"]
+["Galaxy Sweetstorm","Mythic"],["Quantum Star Guardian","Secret"],
+["Plasma Lollipop","Exotic"],["Void Steak","OP"],["Candy God Card","OC"]
 ];
 
 const PETS = [
@@ -440,7 +441,10 @@ const PETS = [
 {name:"Caramel Nebula Fox",rarity:"Epic",damage:70,speed:3.50,range:90,credits:23,fusionOnly:true},
 {name:"Comet Prism Kitten",rarity:"Rare",damage:22,speed:2.50,range:40,credits:10,fusionOnly:true},
 {name:"Moon Mochi Axolotl",rarity:"Epic",damage:30,speed:3.00,range:55,credits:15,fusionOnly:true},
-{name:"Black Hole Supernova Owl",rarity:"OP",damage:120,speed:4.20,range:150,credits:45,fusionOnly:true}
+{name:"Black Hole Supernova Owl",rarity:"OP",damage:120,speed:4.20,range:150,credits:45,fusionOnly:true},
+{name:"Void Dragon",rarity:"Exotic",damage:150,speed:3.2,range:130,credits:35,gemShopOnly:true},
+{name:"Prism Phoenix",rarity:"OP",damage:230,speed:4.1,range:180,credits:60,gemShopOnly:true},
+{name:"Candy Godzilla",rarity:"OC",damage:500,speed:5.5,range:260,credits:125,gemShopOnly:true}
 ];
 
 const FUSION_RECIPES = [
@@ -531,7 +535,10 @@ const SKINS = [
 ["Storm Cloud",240],
 ["Golden Royalty",245],
 ["Rainbow Aurora",250],
-["Candy Apocalypse",255]
+["Candy Apocalypse",255],
+["Plasma Lollipop",280],
+["Black Hole Lollipop",290],
+["Ultra Diamond Lollipop",300]
 ];
 
 const MAX_WAVES = 300;
@@ -624,13 +631,35 @@ const DEFAULT_SAVE = {
     candy_credits:0,current_wave:1,highest_wave_cleared:0,player_max_health:100,player_health:100,
     player_damage:20,player_speed:5.0,player_attack_range:95,
     health_level:0,damage_level:0,speed_level:0,range_level:0,
-    cards_owned:{},pets_owned:{},equipped_pet:null,equipped_skin:"Classic Lollipop",
+    cards_owned:{},pets_owned:{},equipped_pet:null,equipped_pets:[],extra_pet_slots:0,equipped_skin:"Classic Lollipop",
     candy_gems:0,owned_cosmetics:[],equipped_cosmetic:"None",last_gem_gift:"",
+    owned_gem_skins:[],gem_perks:[],fusion_materials:{cosmic_core:0,rainbow_catalyst:0,ultimate_fusion_crystal:0},
+    revive_tokens:0,fusion_reset_tokens:0,secret_code_tokens:0,last_fusion:null,
+    owned_gem_titles:[],equipped_title:"",owned_kill_effects:[],equipped_kill_effect:"",
+    owned_victory_animations:[],equipped_victory_animation:"",
     equipped_card:null,username:"CandyPlayer",trophies:0,wins:0,losses:0,
     redeemed_codes:[]
 };
 
 let save = loadSave();
+save.owned_gem_skins=Array.isArray(save.owned_gem_skins)?save.owned_gem_skins:[];
+save.gem_perks=Array.isArray(save.gem_perks)?save.gem_perks:[];
+save.fusion_materials=Object.assign({cosmic_core:0,rainbow_catalyst:0,ultimate_fusion_crystal:0},save.fusion_materials||{});
+save.revive_tokens=Math.max(0,Math.floor(Number(save.revive_tokens)||0));
+save.fusion_reset_tokens=Math.max(0,Math.floor(Number(save.fusion_reset_tokens)||0));
+save.secret_code_tokens=Math.max(0,Math.floor(Number(save.secret_code_tokens)||0));
+save.extra_pet_slots=Math.max(0,Math.min(3,Math.floor(Number(save.extra_pet_slots)||0)));
+save.equipped_pets=Array.isArray(save.equipped_pets)?save.equipped_pets:[];
+if(!save.equipped_pets.length&&save.equipped_pet)save.equipped_pets=[save.equipped_pet];
+save.equipped_pets=[...new Set(save.equipped_pets.filter(n=>save.pets_owned&&Number(save.pets_owned[n]||0)>0))].slice(0,1+save.extra_pet_slots);
+if(!save.equipped_pets.length&&save.equipped_pet&&Number(save.pets_owned[save.equipped_pet]||0)>0)save.equipped_pets=[save.equipped_pet];
+save.equipped_pet=save.equipped_pets[0]||save.equipped_pet||null;
+save.owned_gem_titles=Array.isArray(save.owned_gem_titles)?save.owned_gem_titles:[];
+save.equipped_title=String(save.equipped_title||"");
+save.owned_kill_effects=Array.isArray(save.owned_kill_effects)?save.owned_kill_effects:[];
+save.equipped_kill_effect=String(save.equipped_kill_effect||"");
+save.owned_victory_animations=Array.isArray(save.owned_victory_animations)?save.owned_victory_animations:[];
+save.equipped_victory_animation=String(save.equipped_victory_animation||"");
 let currentMode="menu";
 let toastTimer=0;
 let waveState=null;
@@ -838,7 +867,7 @@ function render(html){
     root.querySelectorAll("[data-language-anchor]").forEach(x=>x.innerHTML=languageSelectorHtml());
 }
 
-function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">💎 ${Number(save.candy_gems)||0}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div><div class="lang-top">${languageSelectorHtml()}</div></div>`;}
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">💎 ${Number(save.candy_gems)||0}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div>${save.equipped_title?'<div class="pill gem-title-pill">'+esc(save.equipped_title)+'</div>':''}<div class="lang-top">${languageSelectorHtml()}</div></div>`;}
 
 // ================================================================
 // OG MAIN MENU — same important positions from main.py
@@ -909,7 +938,7 @@ function renderCard(c){
 }
 function equipCard(encoded){const name=decodeURIComponent(encoded);if(!save.cards_owned[name])return toast("YOU DO NOT OWN THAT CARD!");save.equipped_card=name;saveGame();toast(name+" EQUIPPED!");cardsPage();}
 function weightedRarity(){let roll=Math.random()*100,total=0;for(const r of RARITIES){total+=RARITY_CHANCES[r];if(roll<=total)return r;}return "Common";}
-function randomCard(){const r=weightedRarity();const fusedNames=new Set(FUSION_RECIPES.filter(x=>x.type==="card").map(x=>x.result));const list=CANDY_CARDS.filter(c=>c[1]===r&&!fusedNames.has(c[0]));return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS.find(c=>!fusedNames.has(c[0]))||CANDY_CARDS[0];}
+function randomCard(){const r=weightedRarity();const fusedNames=new Set(FUSION_RECIPES.filter(x=>x.type==="card").map(x=>x.result));const list=CANDY_CARDS.filter(c=>c[1]===r&&!fusedNames.has(c[0])&&!["Plasma Lollipop","Void Steak","Candy God Card"].includes(c[0]));return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS.find(c=>!fusedNames.has(c[0])&&!["Plasma Lollipop","Void Steak","Candy God Card"].includes(c[0]))||CANDY_CARDS[0];}
 function randomPet(){
     // Chipy is excluded from ordinary random rolls so his custom drop chance is respected.
     const ordinaryPets=PETS.filter(p=>!p.fusionOnly&&!p.gemShopOnly&&p.name!=="Chipy");
@@ -1261,7 +1290,7 @@ function paintPetCanvases(){
 // ================================================================
 function skinsPage(){
     currentMode="skins";
-    render(topbar()+"<div class='section'><h1>SKINS</h1><div class='panel center'>53 skins to collect! Every skin has its own illustrated preview. Skins unlock as your SOLO WAVE advances.</div><div class='skin-grid'>"+SKINS.map(s=>{const unlocked=highestWaveCleared()>=s[1]||save.current_wave>=s[1],eq=save.equipped_skin===s[0];return "<div class='skin-box'><canvas class='skin-preview' width='160' height='116' data-skin='"+esc(s[0])+"' aria-label='"+esc(s[0])+" preview'></canvas><h2>"+esc(s[0])+"</h2><p>UNLOCKS AT WAVE "+s[1]+"</p><button "+(unlocked?"":"disabled")+" class='"+(eq?"gold":"orange")+"' onclick=\"equipSkin('"+encodeURIComponent(s[0])+"')\">"+(eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED")+"</button></div>";}).join("")+"</div></div>");
+    render(topbar()+"<div class='section'><h1>SKINS</h1><div class='panel center'>53 skins to collect! Every skin has its own illustrated preview. Skins unlock as your SOLO WAVE advances.</div><div class='skin-grid'>"+SKINS.map(s=>{const unlocked=highestWaveCleared()>=s[1]||save.current_wave>=s[1]||save.owned_gem_skins.includes(s[0]),eq=save.equipped_skin===s[0];return "<div class='skin-box'><canvas class='skin-preview' width='160' height='116' data-skin='"+esc(s[0])+"' aria-label='"+esc(s[0])+" preview'></canvas><h2>"+esc(s[0])+"</h2><p>UNLOCKS AT WAVE "+s[1]+"</p><button "+(unlocked?"":"disabled")+" class='"+(eq?"gold":"orange")+"' onclick=\"equipSkin('"+encodeURIComponent(s[0])+"')\">"+(eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED")+"</button></div>";}).join("")+"</div></div>");
     paintSkinPreviews();
 }
 function paintSkinPreviews(){
@@ -1275,7 +1304,7 @@ function paintSkinPreviews(){
         ctx.restore();
     });
 }
-function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n);if(!s||(highestWaveCleared()<s[1]&&save.current_wave<s[1]))return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
+function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n),gemOwned=save.owned_gem_skins.includes(n);if(!s||(!gemOwned&&highestWaveCleared()<s[1]&&save.current_wave<s[1]))return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
 
 // ================================================================
 // SHOP
@@ -1478,7 +1507,9 @@ function spawnEnemy(type,boss=false){
     e.color=bossColorForWave(w);
     waveState.enemies.push(e);
 }
-function totalPet(stat){const p=pet(save.equipped_pet);return p?Number(p[stat]||0):0;}
+function getEquippedPetNames(){const raw=Array.isArray(save.equipped_pets)?save.equipped_pets:[];const names=raw.length?raw:(save.equipped_pet?[save.equipped_pet]:[]);return [...new Set(names)].filter(n=>pet(n)&&Number(save.pets_owned[n]||0)>0).slice(0,1+Math.max(0,Number(save.extra_pet_slots)||0));}
+function isPetEquipped(name){return getEquippedPetNames().includes(name);}
+function totalPet(stat){return getEquippedPetNames().reduce((sum,n)=>sum+Number(pet(n)?.[stat]||0),0);}
 function totalDamage(){return save.player_damage+totalPet("damage");}
 function totalSpeed(){return save.player_speed+totalPet("speed");}
 function totalRange(){return save.player_attack_range+totalPet("range");}
@@ -1683,7 +1714,10 @@ const EXTRA_SKIN_ART = {
 "Storm Cloud":{shape:"storm",primary:"#8c9ed9",accent:"#fff173",dark:"#353b68"},
 "Golden Royalty":{shape:"crown",primary:"#ffd74d",accent:"#fff6b0",dark:"#9b5a16"},
 "Rainbow Aurora":{shape:"aurora",primary:"#fb63d4",accent:"#73faff",dark:"#5e3cc2"},
-"Candy Apocalypse":{shape:"apocalypse",primary:"#7d24a8",accent:"#ff3d62",dark:"#180b32"}
+"Candy Apocalypse":{shape:"apocalypse",primary:"#7d24a8",accent:"#ff3d62",dark:"#180b32"},
+"Plasma Lollipop":{shape:"orb",primary:"#ff32eb",accent:"#9bffff",dark:"#32105e"},
+"Black Hole Lollipop":{shape:"blackhole",primary:"#151229",accent:"#a56cff",dark:"#05020d"},
+"Ultra Diamond Lollipop":{shape:"crystal",primary:"#80f4ff",accent:"#ffffff",dark:"#1b5794"}
 };
 function drawExtraSkinArt(ctx,x,y,skin){
     const p=skin.primary,a=skin.accent,d=skin.dark;
@@ -1761,9 +1795,11 @@ function drawPlayer(ctx,x,y,skinOverride,previewOnly=false){
     ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y,14,70);ctx.fillStyle=C.RED;ctx.beginPath();ctx.arc(x,y,40,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ff7878";ctx.beginPath();ctx.arc(x-13,y-13,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.WHITE;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,27,.4,1.5);ctx.stroke();
 }
 function drawEquippedPet(ctx,x,y){
-    const p=pet(save.equipped_pet);
-    if(!p)return;
-    drawPetArt(ctx,x,y,p);
+    const names=getEquippedPetNames();
+    if(!names.length)return;
+    if(names.length===1){drawPetArt(ctx,x,y,pet(names[0]));return;}
+    const spots=names.length===2?[[-30,-34],[30,-34]]:names.length===3?[[-37,-32],[37,-32],[0,35]]:[[-38,-32],[38,-32],[-38,34],[38,34]];
+    names.forEach((name,i)=>drawPetArt(ctx,x+spots[i][0],y+spots[i][1],pet(name),.64));
 }
 
 // ================================================================
