@@ -1218,7 +1218,8 @@ function fusionLabPage(){
     const recipeCard=(recipe,index)=>{
         const inventory=recipe.type==="pet"?save.pets_owned:save.cards_owned;
         const amounts=recipe.ingredients.map(name=>Number(inventory[name]||0));
-        const ready=recipe.ingredients.every((name,i)=>amounts[i]>=1);
+        const materialsReady=Object.entries(FUSION_MATERIAL_COSTS[recipe.result]||{}).every(([key,amount])=>Number(save.fusion_materials[key]||0)>=amount);
+        const ready=recipe.ingredients.every((name,i)=>amounts[i]>=1)&&materialsReady;
         const outputPet=recipe.type==="pet"?PETS.find(p=>p.name===recipe.result):null;
         const outputCard=recipe.type==="card"?CANDY_CARDS.find(c=>c[0]===recipe.result):null;
         const rarity=outputPet?outputPet.rarity:(outputCard?outputCard[1]:"Secret");
