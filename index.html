@@ -78,6 +78,7 @@ canvas.game{display:block;width:100%;height:100%;touch-action:none}
 .skill-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .skin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
 .skin-box{background:#15121e;border:3px solid #493d55;border-radius:12px;padding:14px;text-align:center}
+.skin-preview{display:block;width:160px;max-width:100%;height:auto;min-height:116px;margin:0 auto 8px;border-radius:12px;background:radial-gradient(circle at 50% 45%,#33305d,#11152e 72%);border:1px solid #8b9bff55;box-shadow:inset 0 0 18px #5f50ff22;}
 .rank{display:flex;gap:15px;align-items:center;border:3px solid #403747;background:#15121e;padding:12px;border-radius:12px;margin:10px 0}
 .rank-badge{width:65px;height:65px;border-radius:50%;display:grid;place-items:center;background:#36333c;border:4px solid #888;font-size:24px;font-weight:900}
 .rank.current .rank-badge{box-shadow:0 0 18px rgba(255,255,255,.35)}
@@ -489,7 +490,48 @@ const FUSION_RECIPES = [
 const SKINS = [
 ["Classic Lollipop",1],["Chocolate Bar",5],["Peppermint",10],["Ice Cream Cone",15],
 ["Rainbow Lollipop",20],["Golden Lollipop",25],["Fire Lollipop",30],["Galaxy Lollipop",35],
-["Shadow Lollipop",40],["Diamond Lollipop",45],["Toxic Lollipop",50],["Candy King",50]
+["Shadow Lollipop",40],["Diamond Lollipop",45],["Toxic Lollipop",50],["Candy King",50],
+["Lava Lollipop",55],
+["Frostbite Lollipop",60],
+["Neon Pulse",65],
+["Thunderbolt Candy",70],
+["Solar Flare",75],
+["Lunar Eclipse",80],
+["Crystal Prism",85],
+["Emerald Guardian",90],
+["Sapphire Storm",95],
+["Ruby Inferno",100],
+["Amethyst Dream",105],
+["Rose Quartz",110],
+["Ocean Wave",115],
+["Coral Reef",120],
+["Arctic Wolf",125],
+["Phantom Ghost",130],
+["Shadow Reaper",135],
+["Dragon Flame",140],
+["Phoenix Rebirth",145],
+["Cosmic Comet",150],
+["Black Hole",155],
+["Supernova Star",160],
+["Pixel Glitch",165],
+["Cyber Bot",170],
+["Toxic Slime",175],
+["Biohazard Candy",180],
+["Honeycomb Hero",185],
+["Cookie Crunch",190],
+["Cupcake Supreme",195],
+["Jellybean Jelly",200],
+["Caramel Swirl",205],
+["Watermelon Pop",210],
+["Citrus Blast",215],
+["Mint Avalanche",220],
+["Waffle Warrior",225],
+["Donut Orbit",230],
+["Mushroom Magic",235],
+["Storm Cloud",240],
+["Golden Royalty",245],
+["Rainbow Aurora",250],
+["Candy Apocalypse",255]
 ];
 
 const MAX_WAVES = 300;
@@ -1219,7 +1261,19 @@ function paintPetCanvases(){
 // ================================================================
 function skinsPage(){
     currentMode="skins";
-    render(`${topbar()}<div class="section"><h1>SKINS</h1><div class="panel center">Skins unlock as your SOLO WAVE advances.</div><div class="skin-grid">${SKINS.map(s=>{const unlocked=highestWaveCleared()>=s[1]||save.current_wave>=s[1],eq=save.equipped_skin===s[0];return `<div class="skin-box"><div style="font-size:50px">🍭</div><h2>${esc(s[0])}</h2><p>UNLOCKS AT WAVE ${s[1]}</p><button ${unlocked?"":"disabled"} class="${eq?"gold":"orange"}" onclick="equipSkin('${encodeURIComponent(s[0])}')">${eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED"}</button></div>`;}).join("")}</div></div>`);
+    render(topbar()+"<div class='section'><h1>SKINS</h1><div class='panel center'>53 skins to collect! Every skin has its own illustrated preview. Skins unlock as your SOLO WAVE advances.</div><div class='skin-grid'>"+SKINS.map(s=>{const unlocked=highestWaveCleared()>=s[1]||save.current_wave>=s[1],eq=save.equipped_skin===s[0];return "<div class='skin-box'><canvas class='skin-preview' width='160' height='116' data-skin='"+esc(s[0])+"' aria-label='"+esc(s[0])+" preview'></canvas><h2>"+esc(s[0])+"</h2><p>UNLOCKS AT WAVE "+s[1]+"</p><button "+(unlocked?"":"disabled")+" class='"+(eq?"gold":"orange")+"' onclick=\"equipSkin('"+encodeURIComponent(s[0])+"')\">"+(eq?"EQUIPPED":unlocked?"EQUIP":"LOCKED")+"</button></div>";}).join("")+"</div></div>");
+    paintSkinPreviews();
+}
+function paintSkinPreviews(){
+    document.querySelectorAll("canvas[data-skin]").forEach(c=>{
+        const ctx=c.getContext("2d");
+        ctx.clearRect(0,0,c.width,c.height);
+        ctx.save();
+        ctx.translate(c.width/2,27);
+        ctx.scale(.5,.5);
+        drawPlayer(ctx,0,0,c.dataset.skin,true);
+        ctx.restore();
+    });
 }
 function equipSkin(encoded){const n=decodeURIComponent(encoded),s=SKINS.find(x=>x[0]===n);if(!s||(highestWaveCleared()<s[1]&&save.current_wave<s[1]))return toast("SKIN LOCKED!");save.equipped_skin=n;saveGame();toast("EQUIPPED "+n+"!");skinsPage();}
 
@@ -1587,11 +1641,112 @@ function drawOnlineTeammate(ctx, player){
     ctx.restore();
 }
 
-function drawPlayer(ctx,x,y){
+
+const EXTRA_SKIN_ART = {
+"Lava Lollipop":{shape:"flame",primary:"#ff4b18",accent:"#ffdd45",dark:"#681a19"},
+"Frostbite Lollipop":{shape:"crystal",primary:"#9cefff",accent:"#ffffff",dark:"#2476b7"},
+"Neon Pulse":{shape:"orb",primary:"#ff2bd6",accent:"#73ffff",dark:"#4d1f9e"},
+"Thunderbolt Candy":{shape:"lightning",primary:"#ffe14b",accent:"#ffffff",dark:"#6742b5"},
+"Solar Flare":{shape:"sun",primary:"#ff9c22",accent:"#fff2a0",dark:"#c53e20"},
+"Lunar Eclipse":{shape:"moon",primary:"#a99aff",accent:"#f0eaff",dark:"#20234d"},
+"Crystal Prism":{shape:"crystal",primary:"#65eaff",accent:"#ff8df2",dark:"#26477f"},
+"Emerald Guardian":{shape:"shield",primary:"#20d58a",accent:"#c2ff88",dark:"#12654e"},
+"Sapphire Storm":{shape:"storm",primary:"#277aff",accent:"#b5f3ff",dark:"#162b78"},
+"Ruby Inferno":{shape:"heart",primary:"#f02f54",accent:"#ffb18e",dark:"#771c35"},
+"Amethyst Dream":{shape:"flower",primary:"#ad6cff",accent:"#f7baff",dark:"#542c90"},
+"Rose Quartz":{shape:"heart",primary:"#ff9ebd",accent:"#fff0f4",dark:"#a44b83"},
+"Ocean Wave":{shape:"ocean",primary:"#168fda",accent:"#9bf8ff",dark:"#14507b"},
+"Coral Reef":{shape:"shell",primary:"#ff806f",accent:"#ffcfaa",dark:"#a23c59"},
+"Arctic Wolf":{shape:"wolf",primary:"#d9f7ff",accent:"#8299ff",dark:"#315070"},
+"Phantom Ghost":{shape:"ghost",primary:"#e7faff",accent:"#9ceaff",dark:"#6b63a7"},
+"Shadow Reaper":{shape:"reaper",primary:"#34334a",accent:"#dd8bff",dark:"#130f27"},
+"Dragon Flame":{shape:"dragon",primary:"#ef402e",accent:"#ffd26a",dark:"#741b31"},
+"Phoenix Rebirth":{shape:"phoenix",primary:"#ff8c24",accent:"#fff16d",dark:"#c72e47"},
+"Cosmic Comet":{shape:"comet",primary:"#65e7ff",accent:"#ffffff",dark:"#5236b8"},
+"Black Hole":{shape:"blackhole",primary:"#201b38",accent:"#c76bff",dark:"#080611"},
+"Supernova Star":{shape:"star",primary:"#ffda38",accent:"#ff73bd",dark:"#a52c63"},
+"Pixel Glitch":{shape:"pixel",primary:"#58ffde",accent:"#ff57d5",dark:"#20265f"},
+"Cyber Bot":{shape:"robot",primary:"#65eaff",accent:"#e7fcff",dark:"#27517d"},
+"Toxic Slime":{shape:"slime",primary:"#7cff35",accent:"#e2ff90",dark:"#2f741f"},
+"Biohazard Candy":{shape:"biohazard",primary:"#d7ff33",accent:"#ffffff",dark:"#36551c"},
+"Honeycomb Hero":{shape:"honeycomb",primary:"#ffbf3f",accent:"#fff0a1",dark:"#8b551d"},
+"Cookie Crunch":{shape:"cookie",primary:"#b87642",accent:"#ffe0a4",dark:"#66381f"},
+"Cupcake Supreme":{shape:"cupcake",primary:"#ff78c8",accent:"#fff0f8",dark:"#9a427d"},
+"Jellybean Jelly":{shape:"jelly",primary:"#ff49ac",accent:"#a7fff8",dark:"#a11b79"},
+"Caramel Swirl":{shape:"caramel",primary:"#c78040",accent:"#ffdd8a",dark:"#713718"},
+"Watermelon Pop":{shape:"watermelon",primary:"#ff567f",accent:"#9eff90",dark:"#237b48"},
+"Citrus Blast":{shape:"citrus",primary:"#ffb92e",accent:"#e6ff6e",dark:"#b34a1a"},
+"Mint Avalanche":{shape:"snowflake",primary:"#52f3c2",accent:"#f0ffff",dark:"#168c82"},
+"Waffle Warrior":{shape:"waffle",primary:"#d6a05b",accent:"#ffe0a2",dark:"#734a2b"},
+"Donut Orbit":{shape:"donut",primary:"#ff83bd",accent:"#78eaff",dark:"#9b3973"},
+"Mushroom Magic":{shape:"mushroom",primary:"#ed6487",accent:"#ffe6c4",dark:"#824a7d"},
+"Storm Cloud":{shape:"storm",primary:"#8c9ed9",accent:"#fff173",dark:"#353b68"},
+"Golden Royalty":{shape:"crown",primary:"#ffd74d",accent:"#fff6b0",dark:"#9b5a16"},
+"Rainbow Aurora":{shape:"aurora",primary:"#fb63d4",accent:"#73faff",dark:"#5e3cc2"},
+"Candy Apocalypse":{shape:"apocalypse",primary:"#7d24a8",accent:"#ff3d62",dark:"#180b32"}
+};
+function drawExtraSkinArt(ctx,x,y,skin){
+    const p=skin.primary,a=skin.accent,d=skin.dark;
+    const circle=(cx,cy,r,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();};
+    const poly=(pts,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fill();};
+    const star=(cx,cy,r,col,points=5)=>{const pts=[];for(let i=0;i<points*2;i++){const q=-Math.PI/2+i*Math.PI/points,rr=i%2?r*.48:r;pts.push([cx+Math.cos(q)*rr,cy+Math.sin(q)*rr]);}poly(pts,col);};
+    ctx.save();ctx.lineJoin="round";ctx.lineCap="round";
+    ctx.fillStyle=a;ctx.fillRect(x-5,y+27,10,69);ctx.strokeStyle=d;ctx.lineWidth=3;ctx.strokeRect(x-5,y+27,10,69);
+    ctx.shadowColor=p;ctx.shadowBlur=14;
+    switch(skin.shape){
+      case "flame": poly([[x,y-45],[x+15,y-22],[x+34,y-12],[x+39,y+8],[x+22,y+32],[x,y+39],[x-25,y+29],[x-39,y+7],[x-27,y-14],[x-13,y-4]],p);poly([[x+1,y-17],[x+16,y+2],[x+7,y+26],[x-7,y+18],[x-12,y+4]],a);break;
+      case "crystal": poly([[x,y-44],[x+33,y-10],[x+21,y+22],[x,y+40],[x-22,y+22],[x-33,y-10]],p);poly([[x,y-31],[x+12,y-10],[x,y+25],[x-13,y-10]],a);break;
+      case "lightning": circle(x,y,36,p);poly([[x+1,y-32],[x-19,y+3],[x-2,y+3],[x-12,y+31],[x+20,y-9],[x+3,y-8]],a);break;
+      case "sun": ctx.strokeStyle=a;ctx.lineWidth=5;for(let i=0;i<12;i++){const q=i*Math.PI/6;ctx.beginPath();ctx.moveTo(x+Math.cos(q)*38,y+Math.sin(q)*38);ctx.lineTo(x+Math.cos(q)*49,y+Math.sin(q)*49);ctx.stroke();}circle(x,y,35,p);circle(x-10,y-11,8,a);break;
+      case "moon": circle(x,y,41,p);circle(x+20,y-13,34,d);star(x-16,y-3,5,a);star(x+2,y+18,4,a);break;
+      case "orb": circle(x,y,41,d);circle(x,y,34,p);circle(x-12,y-13,16,a);circle(x+13,y+12,10,d);circle(x+19,y-20,4,"#ffffff");break;
+      case "shield": poly([[x,y-43],[x+35,y-29],[x+30,y+13],[x,y+41],[x-30,y+13],[x-35,y-29]],p);poly([[x,y-27],[x+20,y-19],[x+16,y+10],[x,y+27],[x-16,y+10],[x-20,y-19]],a);ctx.strokeStyle=d;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y-22);ctx.lineTo(x,y+25);ctx.stroke();break;
+      case "heart": ctx.fillStyle=p;ctx.beginPath();ctx.moveTo(x,y+35);ctx.bezierCurveTo(x-55,y+3,x-38,y-40,x-12,y-31);ctx.quadraticCurveTo(x,y-29,x,y-17);ctx.quadraticCurveTo(x+16,y-49,x+37,y-28);ctx.bezierCurveTo(x+58,y-4,x+28,y+24,x,y+35);ctx.fill();circle(x-14,y-16,5,a);break;
+      case "flower": for(let i=0;i<8;i++){const q=i*Math.PI/4;circle(x+Math.cos(q)*23,y+Math.sin(q)*23,15,p);}circle(x,y,20,a);circle(x-6,y-5,5,"#fff5bd");break;
+      case "ocean": circle(x,y,40,d);circle(x,y-4,36,p);ctx.fillStyle=a;ctx.beginPath();ctx.moveTo(x-36,y+7);ctx.quadraticCurveTo(x-19,y-4,x,y+8);ctx.quadraticCurveTo(x+17,y+21,x+36,y+5);ctx.lineTo(x+33,y+27);ctx.quadraticCurveTo(x,y+45,x-33,y+27);ctx.closePath();ctx.fill();ctx.strokeStyle="#ffffff";ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(x-17+i*16,y+7,6,Math.PI,Math.PI*2);ctx.stroke();}break;
+      case "shell": circle(x,y,39,p);ctx.strokeStyle=a;ctx.lineWidth=4;for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(x,y+30);ctx.quadraticCurveTo(x+i*13,y-7,x+i*11,y-29);ctx.stroke();}ctx.beginPath();ctx.arc(x,y+1,33,Math.PI*1.1,Math.PI*1.9);ctx.stroke();break;
+      case "wolf": poly([[x-30,y-8],[x-36,y-40],[x-13,y-29],[x,y-37],[x+15,y-29],[x+36,y-40],[x+30,y-5],[x+23,y+22],[x,y+38],[x-23,y+22]],p);poly([[x-20,y+2],[x-8,y-1],[x-2,y+7],[x-14,y+9]],a);poly([[x+20,y+2],[x+8,y-1],[x+2,y+7],[x+14,y+9]],a);circle(x-13,y-5,4,"#ffffff");circle(x+13,y-5,4,"#ffffff");circle(x-12,y-5,2,d);circle(x+14,y-5,2,d);poly([[x,y+7],[x-5,y+14],[x+5,y+14]],d);break;
+      case "ghost": ctx.fillStyle=p;ctx.beginPath();ctx.moveTo(x-35,y+31);ctx.lineTo(x-35,y-6);ctx.arc(x,y-6,35,Math.PI,0);ctx.lineTo(x+35,y+31);ctx.lineTo(x+17,y+22);ctx.lineTo(x,y+32);ctx.lineTo(x-17,y+22);ctx.closePath();ctx.fill();circle(x-12,y-4,5,d);circle(x+12,y-4,5,d);ctx.strokeStyle=a;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y+9,10,.2,Math.PI-.2);ctx.stroke();break;
+      case "reaper": poly([[x-34,y+29],[x-23,y-8],[x-13,y-28],[x+8,y-40],[x+26,y-21],[x+35,y+29],[x+12,y+18],[x,y+35],[x-15,y+17]],p);ctx.strokeStyle=a;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-20,y-23);ctx.quadraticCurveTo(x+27,y-58,x+41,y-28);ctx.stroke();ctx.fillStyle=a;ctx.fillRect(x-16,y-2,7,3);ctx.fillRect(x+10,y-2,7,3);break;
+      case "dragon": poly([[x-32,y-11],[x-35,y-37],[x-10,y-27],[x+12,y-33],[x+34,y-14],[x+28,y+17],[x+5,y+35],[x-17,y+25],[x-30,y+7]],p);poly([[x-17,y-22],[x-29,y-42],[x-5,y-30]],a);poly([[x+14,y-23],[x+32,y-43],[x+30,y-16]],a);poly([[x+9,y+3],[x+34,y+11],[x+12,y+20]],a);circle(x+13,y-7,5,"#ffffff");circle(x+14,y-7,2,d);break;
+      case "phoenix": poly([[x,y-27],[x+13,y-5],[x+10,y+26],[x,y+38],[x-10,y+26],[x-13,y-5]],p);poly([[x-11,y-12],[x-41,y-33],[x-31,y-1],[x-44,y+13],[x-11,y+14]],a);poly([[x+11,y-12],[x+41,y-33],[x+31,y-1],[x+44,y+13],[x+11,y+14]],a);poly([[x-7,y-23],[x,y-38],[x+7,y-23]],"#fff2a1");break;
+      case "comet": ctx.strokeStyle=a;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(x-45,y+31);ctx.quadraticCurveTo(x-5,y+12,x+3,y-7);ctx.stroke();ctx.strokeStyle=p;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-43,y+21);ctx.quadraticCurveTo(x-7,y+8,x-1,y-10);ctx.stroke();circle(x+7,y-10,28,p);circle(x-2,y-18,8,a);star(x+21,y-21,5,"#ffffff");break;
+      case "blackhole": ctx.strokeStyle=a;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(x,y,48,17,-.35,0,Math.PI*2);ctx.stroke();ctx.strokeStyle=p;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x,y,44,13,.35,0,Math.PI*2);ctx.stroke();circle(x,y,31,d);circle(x,y,19,"#05030a");circle(x-7,y-8,7,p);break;
+      case "star": star(x,y,43,p,6);star(x,y,22,a,6);circle(x,y,5,"#ffffff");break;
+      case "pixel": ctx.fillStyle=p;ctx.fillRect(x-28,y-33,40,14);ctx.fillRect(x-39,y-19,64,34);ctx.fillRect(x-25,y+15,45,15);ctx.fillStyle=a;ctx.fillRect(x-16,y-25,14,14);ctx.fillRect(x+12,y-4,13,13);ctx.fillStyle=d;ctx.fillRect(x-18,y-3,7,7);ctx.fillRect(x+12,y-3,7,7);break;
+      case "robot": ctx.fillStyle=p;ctx.fillRect(x-34,y-30,68,58);ctx.strokeStyle=a;ctx.lineWidth=4;ctx.strokeRect(x-34,y-30,68,58);ctx.fillRect(x-4,y-45,8,15);circle(x,y-48,5,a);ctx.fillStyle=d;ctx.fillRect(x-21,y-14,13,15);ctx.fillRect(x+8,y-14,13,15);ctx.fillStyle=a;ctx.fillRect(x-13,y+9,26,5);break;
+      case "slime": ctx.fillStyle=p;ctx.beginPath();ctx.moveTo(x-39,y+29);ctx.quadraticCurveTo(x-48,y-12,x-24,y-28);ctx.quadraticCurveTo(x,y-48,x+24,y-28);ctx.quadraticCurveTo(x+49,y-8,x+37,y+29);ctx.quadraticCurveTo(x,y+44,x-39,y+29);ctx.fill();circle(x-13,y-3,5,d);circle(x+13,y-3,5,d);ctx.strokeStyle=a;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y+7,11,.2,Math.PI-.2);ctx.stroke();circle(x+26,y+27,4,a);break;
+      case "biohazard": circle(x,y,39,p);for(let i=0;i<3;i++){const q=i*Math.PI*2/3;poly([[x+Math.cos(q)*12,y+Math.sin(q)*12],[x+Math.cos(q-.35)*35,y+Math.sin(q-.35)*35],[x+Math.cos(q+.35)*35,y+Math.sin(q+.35)*35]],a);}circle(x,y,9,d);break;
+      case "honeycomb": for(let row=-1;row<=1;row++)for(let col=-1;col<=1;col++){const xx=x+col*22+(row%2?11:0),yy=y+row*22;poly([[xx-10,yy-6],[xx,yy-12],[xx+10,yy-6],[xx+10,yy+6],[xx,yy+12],[xx-10,yy+6]],p);ctx.strokeStyle=a;ctx.lineWidth=2;ctx.stroke();}circle(x,y,9,a);break;
+      case "cookie": circle(x,y,40,p);for(const [dx,dy,r] of[[-15,-18,5],[13,-21,4],[20,3,5],[-7,13,6],[-24,5,4],[7,25,4]])circle(x+dx,y+dy,r,d);circle(x-14,y-15,5,a);break;
+      case "cupcake": poly([[x-28,y+1],[x+28,y+1],[x+18,y+35],[x-18,y+35]],d);ctx.strokeStyle=a;ctx.lineWidth=2;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(x-16+i*9,y+5);ctx.lineTo(x-13+i*7,y+30);ctx.stroke();}circle(x,y-18,27,p);circle(x-18,y-7,17,p);circle(x+18,y-7,17,p);circle(x,y-35,10,a);break;
+      case "jelly": ctx.fillStyle=p;ctx.beginPath();ctx.ellipse(x,y,35,42,-.2,0,Math.PI*2);ctx.fill();ctx.strokeStyle=a;ctx.lineWidth=3;ctx.stroke();circle(x-13,y-15,9,"#ffffff99");circle(x+11,y+11,5,a);break;
+      case "caramel": circle(x,y,39,p);ctx.strokeStyle=a;ctx.lineWidth=8;ctx.beginPath();ctx.arc(x,y,24,-2.7,1.1);ctx.stroke();ctx.beginPath();ctx.arc(x,y,12,.3,3.6);ctx.stroke();circle(x-11,y-12,5,"#fff1c4");break;
+      case "watermelon": ctx.fillStyle=p;ctx.beginPath();ctx.arc(x,y+7,39,Math.PI,Math.PI*2);ctx.lineTo(x+39,y+7);ctx.quadraticCurveTo(x,y+52,x-39,y+7);ctx.closePath();ctx.fill();ctx.strokeStyle=a;ctx.lineWidth=7;ctx.beginPath();ctx.arc(x,y+7,38,0,Math.PI);ctx.stroke();for(const [dx,dy] of[[-18,0],[0,-12],[18,0],[-7,8],[10,9]]){ctx.fillStyle=d;ctx.beginPath();ctx.ellipse(x+dx,y+dy,2.5,5,.2,0,Math.PI*2);ctx.fill();}break;
+      case "citrus": circle(x,y,39,p);ctx.strokeStyle=a;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.stroke();for(let i=0;i<8;i++){const q=i*Math.PI/4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(q)*30,y+Math.sin(q)*30);ctx.stroke();}circle(x,y,6,a);break;
+      case "snowflake": circle(x,y,29,p);ctx.strokeStyle=a;ctx.lineWidth=4;for(let i=0;i<6;i++){const q=i*Math.PI/3;ctx.beginPath();ctx.moveTo(x-Math.cos(q)*37,y-Math.sin(q)*37);ctx.lineTo(x+Math.cos(q)*37,y+Math.sin(q)*37);ctx.stroke();}circle(x,y,7,"#ffffff");break;
+      case "waffle": ctx.fillStyle=p;ctx.fillRect(x-37,y-35,74,70);ctx.strokeStyle=a;ctx.lineWidth=4;ctx.strokeRect(x-37,y-35,74,70);for(let k=-2;k<=2;k++){ctx.beginPath();ctx.moveTo(x+k*13,y-32);ctx.lineTo(x+k*13,y+32);ctx.moveTo(x-34,y+k*12);ctx.lineTo(x+34,y+k*12);ctx.stroke();}circle(x,y,5,d);break;
+      case "donut": circle(x,y,41,p);circle(x,y,18,d);ctx.strokeStyle=a;ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,29,0,Math.PI*2);ctx.stroke();for(let i=0;i<8;i++){const q=i*Math.PI/4;ctx.fillStyle=i%2?a:"#ffffff";ctx.fillRect(x+Math.cos(q)*28-3,y+Math.sin(q)*28-2,7,4);}break;
+      case "mushroom": ctx.fillStyle=a;ctx.fillRect(x-12,y+3,24,32);ctx.strokeStyle=d;ctx.lineWidth=3;ctx.strokeRect(x-12,y+3,24,32);ctx.fillStyle=p;ctx.beginPath();ctx.moveTo(x-39,y+7);ctx.quadraticCurveTo(x-38,y-38,x,y-39);ctx.quadraticCurveTo(x+38,y-38,x+39,y+7);ctx.closePath();ctx.fill();circle(x-17,y-12,6,a);circle(x+7,y-22,5,a);circle(x+20,y-5,5,a);break;
+      case "storm": circle(x-18,y+2,21,p);circle(x+9,y-9,27,p);circle(x+27,y+7,18,p);ctx.fillStyle=p;ctx.fillRect(x-24,y+1,51,22);poly([[x+3,y+6],[x-9,y+26],[x+1,y+26],[x-4,y+43],[x+16,y+19],[x+6,y+19]],a);break;
+      case "crown": poly([[x-35,y+5],[x-39,y-27],[x-16,y-11],[x,y-37],[x+17,y-10],[x+39,y-27],[x+34,y+6]],p);ctx.fillStyle=a;ctx.fillRect(x-35,y+4,70,14);for(const xx of[-22,0,22])circle(x+xx,y-3,4,"#ffffff");break;
+      case "aurora": circle(x,y,40,d);circle(x,y,33,p);ctx.strokeStyle=a;ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(x,y+1,38,17,-.55,.1,Math.PI*1.7);ctx.stroke();ctx.strokeStyle="#8dffde";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(x,y,30,12,.55,.2,Math.PI*1.8);ctx.stroke();star(x+12,y-12,8,"#ffffff");break;
+      case "apocalypse": circle(x,y,40,d);ctx.strokeStyle=p;ctx.lineWidth=7;ctx.beginPath();ctx.arc(x,y,34,.4,5.9);ctx.stroke();poly([[x-26,y-18],[x-7,y-7],[x-21,y+6],[x-1,y+18],[x-12,y+31],[x+10,y+26],[x+5,y+8],[x+26,y-2],[x+10,y-16],[x+23,y-29],[x,y-22]],a);circle(x-10,y-4,4,"#fff");circle(x+13,y+5,4,"#fff");break;
+      default: circle(x,y,40,p);circle(x-11,y-11,10,a);ctx.strokeStyle=d;ctx.lineWidth=3;ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    if(!["wolf","robot","ghost","dragon","phoenix","pixel","cupcake","watermelon","waffle","mushroom","storm","apocalypse"].includes(skin.shape)){
+        circle(x-13,y-5,3.5,"#ffffff");circle(x+13,y-5,3.5,"#ffffff");circle(x-12,y-5,1.8,d);circle(x+14,y-5,1.8,d);
+        ctx.strokeStyle=d;ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y+7,8,.15,Math.PI-.15);ctx.stroke();
+    }
+    ctx.restore();
+}
+function drawPlayer(ctx,x,y,skinOverride,previewOnly=false){
     const cosmetic=GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic);
-    if(cosmetic){ctx.save();ctx.globalAlpha=.82;ctx.strokeStyle=cosmetic.color;ctx.lineWidth=6;ctx.shadowColor=cosmetic.color;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(x,y,49,0,Math.PI*2);ctx.stroke();if(cosmetic.id==="chipy"){ctx.fillStyle=cosmetic.color;ctx.font="bold 18px Arial";ctx.textAlign="center";ctx.fillText("CHIPY",x,y-58);}ctx.restore();}
+    if(!previewOnly && cosmetic){ctx.save();ctx.globalAlpha=.82;ctx.strokeStyle=cosmetic.color;ctx.lineWidth=6;ctx.shadowColor=cosmetic.color;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(x,y,49,0,Math.PI*2);ctx.stroke();if(cosmetic.id==="chipy"){ctx.fillStyle=cosmetic.color;ctx.font="bold 18px Arial";ctx.textAlign="center";ctx.fillText("CHIPY",x,y-58);}ctx.restore();}
     ctx.fillStyle="#141414";ctx.beginPath();ctx.ellipse(x,y+38,28,9,0,0,Math.PI*2);ctx.fill();
-    const s=save.equipped_skin;
+    const s=skinOverride||save.equipped_skin;
+    if(EXTRA_SKIN_ART[s]){drawExtraSkinArt(ctx,x,y,EXTRA_SKIN_ART[s]);return;}
     if(s==="Chocolate Bar"){ctx.fillStyle=C.BROWN;ctx.fillRect(x-34,y-42,68,82);ctx.strokeStyle=C.DARK_BROWN;ctx.lineWidth=4;ctx.strokeRect(x-34,y-42,68,82);for(const ox of[-17,17])for(const oy of[-22,0,22]){ctx.fillStyle="#b96432";ctx.fillRect(x+ox-8,y+oy-8,16,16);};ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+40,14,55);return;}
     if(s==="Peppermint"){ctx.fillStyle=C.WHITE;ctx.fillRect(x-7,y+30,14,70);ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(x,y,42,0,Math.PI*2);ctx.fill();ctx.strokeStyle=C.RED;ctx.lineWidth=6;ctx.stroke();return;}
     if(s==="Ice Cream Cone"){ctx.fillStyle="#cd914b";ctx.beginPath();ctx.moveTo(x-27,y+8);ctx.lineTo(x+27,y+8);ctx.lineTo(x,y+82);ctx.closePath();ctx.fill();ctx.strokeStyle=C.BROWN;ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#ff96bf";ctx.beginPath();ctx.arc(x,y-24,31,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffe2ac";ctx.beginPath();ctx.arc(x-22,y-4,23,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d2a0ff";ctx.beginPath();ctx.arc(x+22,y-4,23,0,Math.PI*2);ctx.fill();return;}
