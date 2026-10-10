@@ -328,7 +328,10 @@ function startCoopWaves(room) {
     }
     spawnCoopWave(room);
     room.lastTickAt = Date.now();
-    broadcastWave(room, room.pendingLog);
+    const initialState = waveSnapshot(room);
+    for (const p of room.players) {
+        send(p.ws, { type: 'multiplayer_waves_start', you: p.id, state: initialState });
+    }
     room.pendingLog = '';
     console.log(`Co-op waves started in room ${room.code}: ${room.players.map(p => p.data.username).join(' + ')}`);
 }
