@@ -1416,11 +1416,11 @@ const GEM_SHOP_PRODUCTS = [
 ];
 
 const CASH_GEM_PACKS=[
-{id:"starter",name:"Starter",gems:500,price:"$0.99"},
-{id:"popular",name:"Popular",gems:1800,price:"$2.99",featured:true},
-{id:"mega",name:"Mega",gems:3500,price:"$4.99"},
-{id:"ultra",name:"Ultra",gems:8000,price:"$9.99"},
-{id:"legendary",name:"Legendary",gems:18000,price:"$19.99"}
+{id:"starter",name:"Starter",gems:500,price:"$0.99 / month"},
+{id:"popular",name:"Popular",gems:1800,price:"$2.99 / month",featured:true},
+{id:"mega",name:"Mega",gems:3500,price:"$4.99 / month"},
+{id:"ultra",name:"Ultra",gems:8000,price:"$9.99 / month"},
+{id:"legendary",name:"Legendary",gems:18000,price:"$19.99 / month"}
 ];
 const GEM_SHOP_TABS=[
 {id:"pets",label:"PETS"},{id:"skins",label:"SKINS"},{id:"cards",label:"CARDS"},{id:"materials",label:"FUSION MATERIALS"},
@@ -1635,8 +1635,8 @@ function shopPage(tab){
     let content="",heading="";
     if(currentGemShopTab==="money"){
         heading="BUY GEMS WITH USD";
-        const packs=CASH_GEM_PACKS.map(p=>'<div class="skin-box center" style="border-color:'+(p.featured?"#ffe45c":"#514260")+'"><h2>'+esc(p.name)+(p.featured?' ⭐':'')+'</h2><p style="font-size:27px;font-weight:900;color:#ffe45c">'+p.gems.toLocaleString()+' 💎</p><p style="font-size:24px;font-weight:900">'+p.price+' USD</p><p>One-time purchase. No subscription.</p><button class="gold" onclick="buyUsdGemPack(&quot;'+p.id+'&quot;)" '+(cashPurchasesEnabled&&cashPurchasePlayerId?'':'disabled')+'>'+(cashPurchasesEnabled&&cashPurchasePlayerId?'BUY WITH USD':'CHECKOUT NOT CONFIGURED')+'</button></div>').join("");
-        content='<div class="panel center"><h2>REAL MONEY GEM PACKS</h2><p>Payments use secure hosted Stripe Checkout. Candy Cards never stores your card number.</p><p><b>Paid gems are saved on the server for this browser profile.</b> Keep this browser data to retain access to the wallet.</p><p>Checkout: <b style="color:'+(cashPurchasesEnabled?'#38d76b':'#ff9a32')+'">'+(cashPurchasesEnabled?'READY':'NOT SET UP')+'</b></p></div><div class="shop-bundle-grid">'+packs+'</div>'+(cashPurchasesEnabled?'':'<div class="panel center"><b>Setup required before any real charge:</b><p>A parent/guardian must own and configure the payment account. Add STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, DATABASE_URL and APP_BASE_URL to Render environment settings. Never share secret keys in chat.</p></div>');
+        const packs=CASH_GEM_PACKS.map(p=>'<div class="skin-box center" style="border-color:'+(p.featured?"#ffe45c":"#514260")+'"><h2>'+esc(p.name)+(p.featured?' ⭐':'')+'</h2><p style="font-size:27px;font-weight:900;color:#ffe45c">'+p.gems.toLocaleString()+' 💎</p><p style="font-size:24px;font-weight:900">'+p.price+' USD</p><p>Monthly subscription. Gems are added every successful monthly payment. Cancel anytime.</p><button class="gold" onclick="buyUsdGemPack(&quot;'+p.id+'&quot;)" '+(cashPurchasesEnabled&&cashPurchasePlayerId?'':'disabled')+'>'+(cashPurchasesEnabled&&cashPurchasePlayerId?'BUY WITH USD':'CHECKOUT NOT CONFIGURED')+'</button></div>').join("");
+        content='<div class="panel center"><h2>MONTHLY GEM SUBSCRIPTIONS</h2><p>Monthly subscriptions use secure hosted Stripe Checkout. Candy Cards never stores your card number.</p><p><b>Paid gems are saved on the server for this browser profile.</b> Each successful monthly payment adds the selected gem amount to your paid-gem wallet. Cancel your subscription through the Stripe billing portal or by contacting game support.</p><p>Checkout: <b style="color:'+(cashPurchasesEnabled?'#38d76b':'#ff9a32')+'">'+(cashPurchasesEnabled?'READY':'NOT SET UP')+'</b></p></div><div class="shop-bundle-grid">'+packs+'</div>'+(cashPurchasesEnabled?'':'<div class="panel center"><b>Setup required before any real charge:</b><p>A parent/guardian must own and configure the payment account. Add STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, DATABASE_URL and APP_BASE_URL to Render environment settings. Never share secret keys in chat.</p></div>');
     }else if(currentGemShopTab==="classic"){
         const cosmetics=GEM_COSMETICS.map(c=>{
             const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;
