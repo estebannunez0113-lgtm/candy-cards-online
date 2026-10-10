@@ -410,7 +410,9 @@ const PETS = [
 {name:"Supernova Owl",rarity:"Secret",damage:48,speed:1.75,range:45,credits:10},
 {name:"Black Hole Bunny",rarity:"Exotic",damage:62,speed:1.90,range:55,credits:13},
 {name:"Aurora Fox",rarity:"OP",damage:85,speed:2.15,range:70,credits:18},
-{name:"Cosmic Chipy Echo",rarity:"OC",damage:135,speed:2.70,range:95,credits:32}
+{name:"Cosmic Chipy Echo",rarity:"OC",damage:135,speed:2.70,range:95,credits:32},
+{name:"Echo Chipy",rarity:"ULTRA SECRET",damage:1500,speed:100,range:250,credits:250,gemShopOnly:true},
+{name:"Chipy Super Mega",rarity:"ULTRA SECRET",damage:3000,speed:200,range:500,credits:500,fusionOnly:true}
 ];
 
 const SKINS = [
@@ -797,7 +799,7 @@ function weightedRarity(){let roll=Math.random()*100,total=0;for(const r of RARI
 function randomCard(){const r=weightedRarity();const list=CANDY_CARDS.filter(c=>c[1]===r);return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS[0];}
 function randomPet(){
     // Chipy is excluded from ordinary random rolls so his custom drop chance is respected.
-    const ordinaryPets=PETS.filter(p=>p.name!=="Chipy");
+    const ordinaryPets=PETS.filter(p=>!["Chipy","Echo Chipy","Chipy Super Mega"].includes(p.name));
     return ordinaryPets[Math.floor(Math.random()*ordinaryPets.length)];
 }
 function rollPet(){
@@ -1041,12 +1043,69 @@ function drawCardArt(ctx,name,w,h){
 // ================================================================
 function petsPage(){
     currentMode="pets";
-    render(`${topbar()}<div class="section"><h1>PET COLLECTION</h1><div class="panel center">Equipped: <b>${esc(save.equipped_pet||"None")}</b> • Collected ${countPets()}/${PETS.length}</div><div class="scroll"><div class="grid5">${PETS.map(p=>{
+    render(`${topbar()}<div class="section"><h1>PET COLLECTION</h1><div class="panel center">Equipped: <b>${esc(save.equipped_pet||"None")}</b> • Collected ${countPets()}/${PETS.length}<div class="skill-row" style="margin-top:12px"><button class="purple" onclick="fusionLabPage()">FUSION LAB</button><button class="gold" onclick="shopPage()">CANDY GEM SHOP</button></div></div><div class="scroll"><div class="grid5">${PETS.map(p=>{
         const o=Number(save.pets_owned[p.name]||0);
-        return `<div class="pet-card" style="border-color:${RARITY_COLORS[p.rarity]};opacity:${o?1:.55}"><canvas class="pet-canvas" width="180" height="105" data-pet="${esc(p.name)}"></canvas><div class="card-name">${o?esc(p.name):"LOCKED"}</div><div class="card-rarity" style="color:${RARITY_COLORS[p.rarity]}">${p.rarity}</div><div class="card-amount">x${o}</div><div class="small-text">Damage ${p.damage} • Speed ${p.speed} • Range ${p.range} • Candy +${p.credits}</div>${p.name==="Chipy"?`<div style="font-size:10px;font-weight:900;color:#ff4dff">DROP CHANCE: 1 IN 10 QUADRILLION</div>`:""}${o?`<button class="small pet-use-btn" onclick="equipPet('${encodeURIComponent(p.name)}')">${save.equipped_pet===p.name?"USED":"USE"}</button>`:""}</div>`;
+        return `<div class="pet-card" style="border-color:${RARITY_COLORS[p.rarity]};opacity:${o?1:.55}"><canvas class="pet-canvas" width="180" height="105" data-pet="${esc(p.name)}"></canvas><div class="card-name">${o?esc(p.name):"LOCKED"}</div><div class="card-rarity" style="color:${RARITY_COLORS[p.rarity]}">${p.rarity}</div><div class="card-amount">x${o}</div><div class="small-text">Damage ${p.damage} • Speed ${p.speed} • Range ${p.range} • Candy +${p.credits}</div>${p.name==="Chipy"?`<div style="font-size:10px;font-weight:900;color:#ff4dff">DROP CHANCE: 1 IN 10 QUADRILLION</div>`:""}${p.name==="Echo Chipy"?`<div style="font-size:10px;font-weight:900;color:#8deaff">GEM SHOP ONLY • NEVER IN PACKS/WAVES</div>`:""}${p.name==="Chipy Super Mega"?`<div style="font-size:10px;font-weight:900;color:#ffe45c">FUSION ONLY • NEVER IN PACKS/WAVES</div>`:""}${o?`<button class="small pet-use-btn" onclick="equipPet('${encodeURIComponent(p.name)}')">${save.equipped_pet===p.name?"USED":"USE"}</button>`:""}</div>`;
     }).join("")}</div></div></div>`);
     paintPetCanvases();
 }
+function fusionLabPage(){
+    currentMode="fusion-lab";
+    const chipyCount=Number(save.pets_owned["Chipy"]||0);
+    const echoCount=Number(save.pets_owned["Echo Chipy"]||0);
+    const megaCount=Number(save.pets_owned["Chipy Super Mega"]||0);
+    const canFuse=chipyCount>0&&echoCount>0;
+    render(`${topbar()}<div class="section"><h1>✨ CHIPY FUSION LAB</h1>
+    <div class="panel center"><h2>EXCLUSIVE SECRET FUSION</h2>
+    <p>Fuse <b>1 Chipy</b> + <b>1 Echo Chipy</b> to create <b>Chipy Super Mega</b>.</p>
+    <p>This result is <b>FUSION ONLY</b>. It can never appear in card packs or wave drops.</p>
+    <div class="skill-row" style="margin:16px 0">
+      <div class="pet-card" style="border-color:#ff4dff"><canvas class="pet-canvas" width="180" height="105" data-pet="Chipy"></canvas><div class="card-name">Chipy</div><b>OWNED: x${chipyCount}</b></div>
+      <div style="font-size:34px;align-self:center">+</div>
+      <div class="pet-card" style="border-color:#8deaff"><canvas class="pet-canvas" width="180" height="105" data-pet="Echo Chipy"></canvas><div class="card-name">Echo Chipy</div><b>OWNED: x${echoCount}</b></div>
+      <div style="font-size:34px;align-self:center">→</div>
+      <div class="pet-card" style="border-color:#ffe45c"><canvas class="pet-canvas" width="180" height="105" data-pet="Chipy Super Mega"></canvas><div class="card-name">Chipy Super Mega</div><b>OWNED: x${megaCount}</b></div>
+    </div>
+    <div class="panel"><h2>CHIPY SUPER MEGA STATS</h2><p><b>Damage: 3,000</b> • <b>Speed: 200</b> • <b>Range: 500</b> • <b>Candy bonus: +500 per enemy defeated</b></p></div>
+    <button class="gold" onclick="fuseChipySuperMega()" ${canFuse?"":"disabled"}>FUSE CHIPY + ECHO CHIPY</button>
+    <p style="margin-top:12px">${canFuse?"You have both ingredients. Fusion consumes one of each.":"You need one Chipy and one Echo Chipy."}</p>
+    <button class="purple" onclick="shopPage()">GET ECHO CHIPY IN GEM SHOP</button>
+    <button class="blue" onclick="petsPage()">BACK TO PETS</button></div></div>`);
+    paintPetCanvases();
+}
+function fuseChipySuperMega(){
+    const chipyCount=Number(save.pets_owned["Chipy"]||0);
+    const echoCount=Number(save.pets_owned["Echo Chipy"]||0);
+    if(chipyCount<1||echoCount<1){
+        sfxError();
+        toast("YOU NEED 1 CHIPY + 1 ECHO CHIPY!");
+        fusionLabPage();
+        return;
+    }
+    save.pets_owned["Chipy"]=chipyCount-1;
+    save.pets_owned["Echo Chipy"]=echoCount-1;
+    save.pets_owned["Chipy Super Mega"]=Number(save.pets_owned["Chipy Super Mega"]||0)+1;
+    save.equipped_pet="Chipy Super Mega";
+    saveGame();
+    sfxWin();
+    fusionLabPage();
+    toast("FUSION SUCCESS! CHIPY SUPER MEGA UNLOCKED!");
+}
+function buyEchoChipy(){
+    const cost=500;
+    if(save.candy_gems<cost){
+        sfxError();
+        toast("YOU NEED 500 CANDY GEMS FOR ECHO CHIPY!");
+        return;
+    }
+    save.candy_gems-=cost;
+    save.pets_owned["Echo Chipy"]=Number(save.pets_owned["Echo Chipy"]||0)+1;
+    saveGame();
+    sfxWin();
+    toast("ECHO CHIPY PURCHASED! NOW FUSE IT WITH CHIPY!");
+    fusionLabPage();
+}
+
 function equipPet(encoded){
     const name=decodeURIComponent(String(encoded));
     const owned=Number(save.pets_owned[name]||0);
@@ -1110,7 +1169,7 @@ function shopPage(){
     currentMode="gem-shop";
     const cosmetics=GEM_COSMETICS.map(c=>{const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;return `<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid ${c.color};border-radius:50%;box-shadow:0 0 18px ${c.color}"></span></div><h2>${esc(c.name)}</h2><p>${esc(c.desc)}</p><p><b>💎 ${c.cost}</b></p><button class="${eq?"gold":owned?"blue":"purple"}" onclick="${owned?`equipGemCosmetic('${c.id}')`:`buyGemCosmetic('${c.id}')`}">${eq?"EQUIPPED":owned?"EQUIP":"BUY FOR 💎 "+c.cost}</button></div>`;}).join("");
     const bundles=GEM_BUNDLES.map(b=>`<div class="panel center"><h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p><p><b>Cost: 💎 ${b.cost}</b></p><button class="gold" onclick="buyGemBundle('${b.id}')">BUY BUNDLE</button></div>`).join("");
-    render(`${topbar()}<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>${save.candy_credits.toLocaleString()}</b> &nbsp; • &nbsp; 💎 Candy Gems: <b>${save.candy_gems.toLocaleString()}</b></p><button class="purple" onclick="claimDailyGems()">${save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎"}</button><p style="font-size:13px">Earn 3 gems for each new normal wave and 10 gems for each new boss wave. Replay rewards are not repeated.</p></div><h1>GEM BUNDLES</h1><div class="shop-bundle-grid">${bundles}</div><h1>GEM COSMETICS</h1><div class="panel center"><p>Cosmetics are visual only. Equip one to add its aura to your character.</p><p>Equipped: <b>${esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")}</b></p><button class="gray" onclick="equipGemCosmetic('none')">REMOVE AURA</button></div><div class="skin-grid">${cosmetics}</div><div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>`);
+    render(`${topbar()}<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>${save.candy_credits.toLocaleString()}</b> &nbsp; • &nbsp; 💎 Candy Gems: <b>${save.candy_gems.toLocaleString()}</b></p><button class="purple" onclick="claimDailyGems()">${save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎"}</button><p style="font-size:13px">Earn 3 gems for each new normal wave and 10 gems for each new boss wave. Replay rewards are not repeated.</p></div><h1>EXCLUSIVE PET FUSION INGREDIENTS</h1><div class="panel center"><h2>🌌 ECHO CHIPY</h2><p>Exclusive fusion ingredient. This pet is never awarded by packs or waves.</p><p><b>Damage 1,500 • Speed 100 • Range 250 • Candy +250</b></p><p>Price: <b>500 Candy Gems</b></p><button class="purple" onclick="buyEchoChipy()">BUY ECHO CHIPY — 500 💎</button> <button class="blue" onclick="fusionLabPage()">OPEN FUSION LAB</button></div><h1>GEM BUNDLES</h1><div class="shop-bundle-grid">${bundles}</div><h1>GEM COSMETICS</h1><div class="panel center"><p>Cosmetics are visual only. Equip one to add its aura to your character.</p><p>Equipped: <b>${esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")}</b></p><button class="gray" onclick="equipGemCosmetic('none')">REMOVE AURA</button></div><div class="skin-grid">${cosmetics}</div><div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>`);
 }
 function openUpgradeShop(){if(waveState&&!waveState.finished)waveState.running=false;upgradePage();}
 function upgradePage(){
@@ -1501,6 +1560,32 @@ function drawPetArt(ctx,x,y,p,scale=1){
 
     shadow();
 
+    if(n==="Echo Chipy"){
+        ctx.save();
+        ctx.globalAlpha=.35;circ(0,-10,48,"#8c65ff");ctx.globalAlpha=1;
+        ctx.strokeStyle="#8deaff";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,-8,43,51,-.3,0,Math.PI*2);ctx.stroke();
+        ctx.strokeStyle="#c17dff";ctx.beginPath();ctx.ellipse(0,-8,51,40,.35,0,Math.PI*2);ctx.stroke();
+        ell(0,7,34,24,"#20283f");circ(0,-17,29,"#555a88");
+        poly([[-24,-36],[-17,-62],[-3,-41]],"#555a88");poly([[24,-36],[17,-62],[3,-41]],"#555a88");
+        circ(0,-9,18,W);eye(-10,-21,"#8deaff",6);eye(10,-21,"#c17dff",6);
+        circ(0,-9,3,"#111");ctx.strokeStyle="#10121e";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-5,7,.15,2.95);ctx.stroke();
+        line(-18,-8,-38,-13,"#d9faff",2);line(-18,-3,-40,2,"#d9faff",2);line(18,-8,38,-13,"#d9faff",2);line(18,-3,40,2,"#d9faff",2);
+        ctx.restore();return;
+    }
+    if(n==="Chipy Super Mega"){
+        ctx.save();
+        const glow=ctx.createRadialGradient(0,-5,8,0,-5,68);glow.addColorStop(0,"#fff6ad");glow.addColorStop(.35,"#ffca48");glow.addColorStop(.7,"#ff4dff");glow.addColorStop(1,"rgba(120,50,255,0)");
+        circ(0,-5,59,glow);
+        ctx.strokeStyle="#ffe45c";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-8,57,43,-.2,0,Math.PI*2);ctx.stroke();
+        ctx.strokeStyle="#ff4dff";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,-8,43,57,.35,0,Math.PI*2);ctx.stroke();
+        ell(0,7,38,27,"#1a1333");circ(0,-17,33,"#312751");
+        poly([[-28,-36],[-19,-70],[-3,-43]],"#312751");poly([[28,-36],[19,-70],[3,-43]],"#312751");
+        ctx.strokeStyle="#ffe45c";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-17,34,0,Math.PI*2);ctx.stroke();
+        circ(0,-9,21,W);eye(-12,-22,"#ffe45c",7);eye(12,-22,"#ffe45c",7);
+        circ(0,-9,4,"#111");ctx.strokeStyle="#111";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-5,8,.15,2.95);ctx.stroke();
+        line(-18,-8,-42,-14,"#fff",2);line(-18,-3,-44,3,"#fff",2);line(18,-8,42,-14,"#fff",2);line(18,-3,44,3,"#fff",2);
+        ctx.restore();return;
+    }
     if(n==="Chipy"){
         ell(0,7,34,24,"#35353d");
         circ(0,-17,29,"#3f4048");
@@ -2144,7 +2229,7 @@ function gameModesPage(){
 function mainMenuExtras(){
     const modal=document.createElement("div");
     modal.className="modal";
-    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();gameModesPage()">WAVES / INFINITE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage('waves')">WAVES MULTIPLAYER</button><button class="red" onclick="this.closest('.modal').remove();multiplayerPage('battle')">BATTLING MULTIPLAYER</button><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();gameModesPage()">WAVES / INFINITE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage('waves')">WAVES MULTIPLAYER</button><button class="red" onclick="this.closest('.modal').remove();multiplayerPage('battle')">BATTLING MULTIPLAYER</button><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="purple" onclick="this.closest('.modal').remove();fusionLabPage()">FUSION LAB</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
     document.body.appendChild(modal);
 }
 
