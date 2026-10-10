@@ -301,6 +301,24 @@ button:disabled{filter:saturate(.55) brightness(.8) !important;opacity:.78;curso
 .wave-pick{background:linear-gradient(135deg,#393064,#244d80) !important;border-color:#9b8cff !important;box-shadow:0 0 8px rgba(116,101,255,.3)}
 .wave-pick.is-boss{background:linear-gradient(135deg,#79521a,#c07a18) !important;border-color:#ffe38a !important;box-shadow:0 0 12px rgba(255,191,49,.4)}
 
+
+.gem-shop-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 20px}
+.gem-shop-tabs button{flex:1 1 135px;min-width:112px;white-space:normal}
+.gem-product-card{min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:8px;position:relative}
+.gem-product-card h2{font-size:19px;line-height:1.2}
+.gem-product-card p{margin:3px 0}
+.gem-product-icon{height:45px;display:grid;place-items:center;font-size:36px;color:#88f5ff;text-shadow:0 0 16px #7c6dff}
+.gem-product-cost{color:#ffe878;font-size:18px}
+.daily-discount{display:inline-block;border-radius:6px;padding:3px 6px;background:#1a6f54;color:#afffe2;font-size:10px;font-weight:1000}
+.gem-title-pill{color:#ffe878!important;border-color:#ffe878!important;box-shadow:0 0 10px #ffe87844}
+.gem-victory-overlay{position:fixed;z-index:9997;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,#1e1b56dd,#050511c9);animation:gemVictoryFade 2.6s ease forwards}
+.gem-victory-title{font-size:clamp(30px,7vw,78px);font-weight:1000;text-align:center;letter-spacing:2px;color:#fff;text-shadow:0 0 15px #6df6ff,0 0 35px #b34cff;animation:gemVictoryZoom .65s cubic-bezier(.2,1.5,.4,1)}
+.gem-victory-subtitle{font-size:clamp(15px,3vw,28px);font-weight:900;color:#ffe878;margin-top:12px;text-align:center}
+.gem-victory-fireworks{background:radial-gradient(circle at 20% 30%,#fa4da455,transparent 22%),radial-gradient(circle at 80% 35%,#ffe45c66,transparent 24%),radial-gradient(circle,#30145edd,#050511df)}
+.gem-victory-galaxy{background:radial-gradient(circle,#4c168ecc,#041638ef)}
+.gem-victory-rainbow{background:linear-gradient(120deg,#ff3f9d55,#ffe95c55,#54f4ff55,#bb68ff66)}
+@keyframes gemVictoryFade{0%{opacity:0}12%{opacity:1}78%{opacity:1}100%{opacity:0}}
+@keyframes gemVictoryZoom{0%{transform:scale(.45) rotate(-5deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
 </style>
 </head>
 <body>
@@ -1364,12 +1382,209 @@ const GEM_COSMETICS=[
  {id:"sugarfire",name:"Sugarfire Aura",cost:210,color:"#ff5572",desc:"A candy-red flame glow"},
  {id:"stardust",name:"Stardust Sparkles",cost:125,color:"#fff18a",desc:"Golden stardust shimmer"}
 ];
-function shopPage(){
-    currentMode="gem-shop";
-    const cosmetics=GEM_COSMETICS.map(c=>{const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;return `<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid ${c.color};border-radius:50%;box-shadow:0 0 18px ${c.color}"></span></div><h2>${esc(c.name)}</h2><p>${esc(c.desc)}</p><p><b>💎 ${c.cost}</b></p><button class="${eq?"gold":owned?"blue":"purple"}" onclick="${owned?`equipGemCosmetic('${c.id}')`:`buyGemCosmetic('${c.id}')`}">${eq?"EQUIPPED":owned?"EQUIP":"BUY FOR 💎 "+c.cost}</button></div>`;}).join("");
-    const bundles=GEM_BUNDLES.map(b=>`<div class="panel center"><h2>${esc(b.name)}</h2><p>${esc(b.desc)}</p><p><b>Cost: 💎 ${b.cost}</b></p><button class="gold" onclick="buyGemBundle('${b.id}')">BUY BUNDLE</button></div>`).join("");
-    render(`${topbar()}<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>${save.candy_credits.toLocaleString()}</b> &nbsp; • &nbsp; 💎 Candy Gems: <b>${save.candy_gems.toLocaleString()}</b></p><button class="purple" onclick="claimDailyGems()">${save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎"}</button><p style="font-size:13px">Earn 3 gems for each new normal wave and 10 gems for each new boss wave. Replay rewards are not repeated.</p></div><h1>EXCLUSIVE PET FUSION INGREDIENTS</h1><div class="panel center"><h2>🌌 ECHO CHIPY</h2><p>Exclusive fusion ingredient. This pet is never awarded by packs or waves.</p><p><b>Damage 1,500 • Speed 100 • Range 250 • Candy +250</b></p><p>Price: <b>500 Candy Gems</b></p><button class="purple" onclick="buyEchoChipy()">BUY ECHO CHIPY — 500 💎</button> <button class="blue" onclick="fusionLabPage()">OPEN FUSION LAB</button></div><h1>GEM BUNDLES</h1><div class="shop-bundle-grid">${bundles}</div><h1>GEM COSMETICS</h1><div class="panel center"><p>Cosmetics are visual only. Equip one to add its aura to your character.</p><p>Equipped: <b>${esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")}</b></p><button class="gray" onclick="equipGemCosmetic('none')">REMOVE AURA</button></div><div class="skin-grid">${cosmetics}</div><div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>`);
+const GEM_SHOP_PRODUCTS = [
+{id:"pet_echo_chipy",category:"pets",name:"Echo Chipy",cost:500,type:"pet",reward:"Echo Chipy",desc:"Exclusive fusion ingredient for Chipy Super Mega."},
+{id:"pet_void_dragon",category:"pets",name:"Void Dragon",cost:750,type:"pet",reward:"Void Dragon",desc:"A cosmic dragon with powerful range and candy rewards."},
+{id:"pet_prism_phoenix",category:"pets",name:"Prism Phoenix",cost:1500,type:"pet",reward:"Prism Phoenix",desc:"A radiant high-tier companion."},
+{id:"pet_candy_godzilla",category:"pets",name:"Candy Godzilla",cost:3000,type:"pet",reward:"Candy Godzilla",desc:"An enormous endgame pet with huge stats."},
+{id:"skin_plasma",category:"skins",name:"Plasma Lollipop",cost:500,type:"skin",reward:"Plasma Lollipop",desc:"Unlock this plasma skin permanently."},
+{id:"skin_blackhole",category:"skins",name:"Black Hole Lollipop",cost:1100,type:"skin",reward:"Black Hole Lollipop",desc:"A dark cosmic lollipop with a glowing orbit."},
+{id:"skin_ultra_diamond",category:"skins",name:"Ultra Diamond Lollipop",cost:2000,type:"skin",reward:"Ultra Diamond Lollipop",desc:"A rare crystal skin, permanently unlocked."},
+{id:"card_plasma",category:"cards",name:"Plasma Lollipop",cost:350,type:"card",reward:"Plasma Lollipop",desc:"Gem-exclusive Exotic card. Never appears in packs or waves."},
+{id:"card_void_steak",category:"cards",name:"Void Steak",cost:900,type:"card",reward:"Void Steak",desc:"Gem-exclusive OP card. Never appears in packs or waves."},
+{id:"card_candy_god",category:"cards",name:"Candy God Card",cost:1900,type:"card",reward:"Candy God Card",desc:"Gem-exclusive OC card. Never appears in packs or waves."},
+{id:"mat_cosmic_core",category:"materials",name:"Cosmic Core",cost:150,type:"material",reward:"cosmic_core",desc:"Used by secret pet fusions."},
+{id:"mat_rainbow_catalyst",category:"materials",name:"Rainbow Catalyst",cost:300,type:"material",reward:"rainbow_catalyst",desc:"A rare material needed by powerful fusions."},
+{id:"mat_ultimate_crystal",category:"materials",name:"Ultimate Fusion Crystal",cost:800,type:"material",reward:"ultimate_fusion_crystal",desc:"A powerful material used in top-tier fusions."},
+{id:"egg_machine",category:"eggs",name:"Mystery Egg Machine",cost:250,type:"egg",reward:"mystery_egg",desc:"Hatch a permanent random pet. Common 45.2%, Uncommon 25%, Rare 14%, Epic 7%, Legendary 4%, Mythic 2.2%, Secret 1.2%, Exotic 0.9%, OP 0.4%, OC 0.1%."},
+{id:"boost_double_candy",category:"boosts",name:"Double Candy Forever",cost:1200,type:"perk",reward:"double_candy",desc:"Permanently doubles candy earned from defeated enemies."},
+{id:"boost_wave_gems",category:"boosts",name:"Wave Gem Jackpot",cost:1800,type:"perk",reward:"double_wave_rewards",desc:"Permanently doubles gems earned from each first wave clear."},
+{id:"special_revive",category:"special",name:"Revive Token",cost:120,type:"revive",reward:"revive",desc:"Saved until needed. Automatically revives you once after defeat."},
+{id:"special_pet_slot",category:"special",name:"Extra Pet Slot",cost:600,type:"slot",reward:"pet_slot",desc:"Permanently equips one more pet at the same time, up to 4 total."},
+{id:"special_fusion_reset",category:"special",name:"Fusion Reset Token",cost:400,type:"fusionreset",reward:"fusion_reset",desc:"Reverse your most recent fusion and recover its ingredients."},
+{id:"special_code_token",category:"special",name:"Secret Code Token",cost:250,type:"codetoken",reward:"secret_code",desc:"Redeem one token for a surprise in-game reward."},
+{id:"title_gem_master",category:"titles",name:"Gem Master",cost:150,type:"title",reward:"Gem Master",desc:"A permanent title displayed beside your rank."},
+{id:"title_candy_millionaire",category:"titles",name:"Candy Millionaire",cost:450,type:"title",reward:"Candy Millionaire",desc:"A permanent collector title."},
+{id:"title_cosmic_legend",category:"titles",name:"Cosmic Legend",cost:900,type:"title",reward:"Cosmic Legend",desc:"A prestigious permanent title."},
+{id:"kill_starburst",category:"kill",name:"Starburst Kill Effect",cost:250,type:"kill",reward:"starburst",desc:"Adds bright star particles when enemies are defeated."},
+{id:"kill_crystal_shatter",category:"kill",name:"Crystal Shatter Effect",cost:500,type:"kill",reward:"crystal",desc:"Adds a blue crystal-like particle burst on kills."},
+{id:"kill_candy_explosion",category:"kill",name:"Candy Explosion Effect",cost:800,type:"kill",reward:"candy",desc:"Adds a colorful candy-colored burst on kills."},
+{id:"victory_fireworks",category:"victory",name:"Fireworks Victory",cost:400,type:"victory",reward:"fireworks",desc:"A celebration overlay appears after clearing a wave."},
+{id:"victory_galaxy",category:"victory",name:"Galaxy Portal Victory",cost:900,type:"victory",reward:"galaxy",desc:"A cosmic portal victory animation."},
+{id:"victory_rainbow",category:"victory",name:"Rainbow Burst Victory",cost:1200,type:"victory",reward:"rainbow",desc:"A rainbow celebration when you clear a wave."}
+];
+const GEM_SHOP_TABS=[
+{id:"pets",label:"PETS"},{id:"skins",label:"SKINS"},{id:"cards",label:"CARDS"},{id:"materials",label:"FUSION MATERIALS"},
+{id:"eggs",label:"MYSTERY EGGS"},{id:"boosts",label:"PERMANENT BOOSTS"},{id:"special",label:"SPECIAL ITEMS"},
+{id:"titles",label:"TITLES"},{id:"kill",label:"KILL EFFECTS"},{id:"victory",label:"VICTORY ANIMATIONS"},
+{id:"daily",label:"DAILY STOCK"},{id:"classic",label:"OLD BUNDLES & AURAS"}
+];
+const GEM_DAILY_STOCK_IDS=["pet_void_dragon","card_plasma","skin_plasma","mat_cosmic_core","title_gem_master","kill_starburst","victory_fireworks","pet_candy_godzilla","card_candy_god","mat_ultimate_crystal","title_cosmic_legend"];
+let currentGemShopTab="pets";
+function getGemProductCost(item){return item.type==="slot"?600*Math.pow(2,Math.max(0,Number(save.extra_pet_slots)||0)):item.cost;}
+function gemProductOwned(item){
+    if(item.type==="skin")return save.owned_gem_skins.includes(item.reward)||(()=>{const sk=SKINS.find(x=>x[0]===item.reward);return !!sk&&(highestWaveCleared()>=sk[1]||save.current_wave>=sk[1]);})();
+    if(item.type==="perk")return save.gem_perks.includes(item.reward);
+    if(item.type==="title")return save.owned_gem_titles.includes(item.reward);
+    if(item.type==="kill")return save.owned_kill_effects.includes(item.reward);
+    if(item.type==="victory")return save.owned_victory_animations.includes(item.reward);
+    if(item.type==="slot")return Number(save.extra_pet_slots)>=3;
+    return false;
 }
+function gemProductInventory(item){
+    if(item.type==="pet")return Number(save.pets_owned[item.reward]||0);
+    if(item.type==="card")return Number(save.cards_owned[item.reward]||0);
+    if(item.type==="material")return Number(save.fusion_materials[item.reward]||0);
+    if(item.type==="revive")return save.revive_tokens;
+    if(item.type==="fusionreset")return save.fusion_reset_tokens;
+    if(item.type==="codetoken")return save.secret_code_tokens;
+    return 0;
+}
+function dailyGemProducts(){
+    const day=Math.floor(Date.now()/86400000);
+    return Array.from({length:3},(_,i)=>{
+        const id=GEM_DAILY_STOCK_IDS[(day*3+i)%GEM_DAILY_STOCK_IDS.length];
+        const item=GEM_SHOP_PRODUCTS.find(p=>p.id===id);
+        return item?Object.assign({},item,{dailyCost:Math.max(1,Math.ceil(getGemProductCost(item)*.8))}):null;
+    }).filter(Boolean);
+}
+function equipGemTitle(title){
+    if(title&&!save.owned_gem_titles.includes(title))return toast("TITLE NOT OWNED!");
+    save.equipped_title=title||"";saveGame();shopPage("titles");toast(title?"TITLE EQUIPPED: "+title:"TITLE REMOVED!");
+}
+function equipGemKillEffect(id){
+    if(id&&!save.owned_kill_effects.includes(id))return toast("KILL EFFECT NOT OWNED!");
+    save.equipped_kill_effect=id||"";saveGame();shopPage("kill");toast(id?"KILL EFFECT EQUIPPED!":"KILL EFFECT REMOVED!");
+}
+function equipGemVictoryAnimation(id){
+    if(id&&!save.owned_victory_animations.includes(id))return toast("VICTORY ANIMATION NOT OWNED!");
+    save.equipped_victory_animation=id||"";saveGame();shopPage("victory");toast(id?"VICTORY ANIMATION EQUIPPED!":"VICTORY ANIMATION REMOVED!");
+}
+function gemShopProductCard(item,daily){
+    const cost=daily?item.dailyCost:getGemProductCost(item),owned=gemProductOwned(item),inventory=gemProductInventory(item);
+    let label="BUY FOR "+cost+" GEMS",action="buyGemProduct('"+item.id+"'"+(daily?",true":"")+")",disabled=false;
+    if(item.type==="egg")label="HATCH EGG — "+cost+" GEMS";
+    if(["pet","card","material","revive","fusionreset","codetoken"].includes(item.type))label=(item.type==="pet"||item.type==="card"?"BUY ANOTHER":item.type==="material"?"BUY MORE":"BUY")+" — "+cost+" GEMS"+(inventory?" (HAVE "+inventory+")":"");
+    if(owned){
+        if(item.type==="skin"){label=save.equipped_skin===item.reward?"EQUIPPED":"EQUIP SKIN";action="equipSkin('"+encodeURIComponent(item.reward)+"')";}
+        else if(item.type==="title"){label=save.equipped_title===item.reward?"EQUIPPED":"EQUIP TITLE";action="equipGemTitle('"+item.reward+"')";}
+        else if(item.type==="kill"){label=save.equipped_kill_effect===item.reward?"EQUIPPED":"EQUIP EFFECT";action="equipGemKillEffect('"+item.reward+"')";}
+        else if(item.type==="victory"){label=save.equipped_victory_animation===item.reward?"EQUIPPED":"EQUIP ANIMATION";action="equipGemVictoryAnimation('"+item.reward+"')";}
+        else {label="PERMANENTLY OWNED";disabled=true;}
+    }
+    if(item.type==="slot"&&Number(save.extra_pet_slots)<3){label="BUY SLOT — "+cost+" GEMS";action="buyGemProduct('"+item.id+"'"+(daily?",true":"")+")";}
+    if(item.type==="slot"&&Number(save.extra_pet_slots)>=3){label="MAX PET SLOTS";disabled=true;}
+    if(item.type==="perk"&&owned){label="PERMANENT BOOST ACTIVE";disabled=true;}
+    const icons={pet:"✦",skin:"◉",card:"▤",material:"◆",egg:"🥚",perk:"↗",revive:"♥",slot:"＋",fusionreset:"↶",codetoken:"⌘",title:"★",kill:"✹",victory:"✧"};
+    let extra="";
+    if(item.type==="skin"&&owned)extra="<p class='small-text'>Permanent skin unlocked</p>";
+    if(item.type==="slot")extra="<p class='small-text'>Extra slots purchased: "+save.extra_pet_slots+"/3</p>";
+    return "<div class='skin-box gem-product-card'><div class='gem-product-icon'>"+(icons[item.type]||"✧")+"</div><h2>"+esc(item.name)+"</h2><p>"+esc(item.desc)+"</p><p class='gem-product-cost'><b>GEMS: "+cost.toLocaleString()+"</b>"+(daily?" <span class='daily-discount'>DAILY DEAL</span>":"")+"</p>"+extra+"<button class='"+(owned?"blue":"purple")+"' onclick=\""+action+"\" "+(disabled?"disabled":"")+">"+label+"</button></div>";
+}
+function buyGemProduct(id,daily){
+    const item=GEM_SHOP_PRODUCTS.find(x=>x.id===id);
+    if(!item){toast("GEM SHOP ITEM NOT FOUND!");return;}
+    let offer=null;if(daily){offer=dailyGemProducts().find(x=>x.id===id);if(!offer)return toast("THAT ITEM IS NOT IN TODAY'S STOCK!");}
+    const cost=daily?offer.dailyCost:getGemProductCost(item);
+    if(item.type==="slot"&&Number(save.extra_pet_slots)>=3)return toast("YOU ALREADY OWN ALL 4 PET SLOTS!");
+    if(["skin","perk","title","kill","victory"].includes(item.type)&&gemProductOwned(item)){
+        if(item.type==="skin")return equipSkin(encodeURIComponent(item.reward));
+        if(item.type==="title")return equipGemTitle(item.reward);
+        if(item.type==="kill")return equipGemKillEffect(item.reward);
+        if(item.type==="victory")return equipGemVictoryAnimation(item.reward);
+        return toast("YOU ALREADY OWN THIS PERMANENT UPGRADE!");
+    }
+    if(Number(save.candy_gems)<cost){sfxError();toast("NOT ENOUGH CANDY GEMS!");return;}
+    save.candy_gems-=cost;
+    if(item.type==="pet")save.pets_owned[item.reward]=Number(save.pets_owned[item.reward]||0)+1;
+    else if(item.type==="card")save.cards_owned[item.reward]=Number(save.cards_owned[item.reward]||0)+1;
+    else if(item.type==="skin"){if(!save.owned_gem_skins.includes(item.reward))save.owned_gem_skins.push(item.reward);}
+    else if(item.type==="material")save.fusion_materials[item.reward]=Number(save.fusion_materials[item.reward]||0)+1;
+    else if(item.type==="egg"){
+        const rarityTable=[["OC",.1],["OP",.4],["Exotic",.9],["Secret",1.2],["Mythic",2.2],["Legendary",4],["Epic",7],["Rare",14],["Uncommon",25],["Common",45.2]];
+        const roll=Math.random()*100;let total=0,rarity="Common";for(const pair of rarityTable){total+=pair[1];if(roll<total){rarity=pair[0];break;}}
+        let pool=PETS.filter(p=>!p.fusionOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega"&&p.rarity===rarity);
+        if(!pool.length)pool=PETS.filter(p=>!p.fusionOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega");
+        const winner=pool[Math.floor(Math.random()*pool.length)];save.pets_owned[winner.name]=Number(save.pets_owned[winner.name]||0)+1;save.last_egg_pet=winner.name;
+    }else if(item.type==="perk"){if(!save.gem_perks.includes(item.reward))save.gem_perks.push(item.reward);}
+    else if(item.type==="revive")save.revive_tokens++;
+    else if(item.type==="slot")save.extra_pet_slots++;
+    else if(item.type==="fusionreset")save.fusion_reset_tokens++;
+    else if(item.type==="codetoken")save.secret_code_tokens++;
+    else if(item.type==="title"){if(!save.owned_gem_titles.includes(item.reward))save.owned_gem_titles.push(item.reward);save.equipped_title=item.reward;}
+    else if(item.type==="kill"){if(!save.owned_kill_effects.includes(item.reward))save.owned_kill_effects.push(item.reward);save.equipped_kill_effect=item.reward;}
+    else if(item.type==="victory"){if(!save.owned_victory_animations.includes(item.reward))save.owned_victory_animations.push(item.reward);save.equipped_victory_animation=item.reward;}
+    saveGame();sfxWin();
+    let message="PURCHASE SAVED!";
+    if(item.type==="egg")message="MYSTERY EGG HATCHED! "+(save.last_egg_pet||"A PET")+" JOINED YOUR COLLECTION!";
+    else if(item.type==="pet")message="PET PURCHASED! SAVED PERMANENTLY.";
+    else if(item.type==="card")message="CARD PURCHASED! SAVED PERMANENTLY.";
+    else if(item.type==="skin")message="SKIN PERMANENTLY UNLOCKED!";
+    else if(item.type==="material")message="FUSION MATERIAL SAVED TO YOUR INVENTORY!";
+    else if(item.type==="perk")message="PERMANENT BOOST ACTIVATED!";
+    else if(item.type==="revive")message="REVIVE TOKEN SAVED!";
+    else if(item.type==="slot")message="EXTRA PET SLOT PERMANENTLY UNLOCKED!";
+    else if(item.type==="fusionreset")message="FUSION RESET TOKEN SAVED!";
+    else if(item.type==="codetoken")message="SECRET CODE TOKEN SAVED!";
+    else if(item.type==="title")message="PERMANENT TITLE UNLOCKED!";
+    else if(item.type==="kill")message="KILL EFFECT PERMANENTLY UNLOCKED!";
+    else if(item.type==="victory")message="VICTORY ANIMATION PERMANENTLY UNLOCKED!";
+    shopPage(currentGemShopTab);toast(message);
+}
+function redeemSecretCodeToken(){
+    if(save.secret_code_tokens<1)return toast("YOU NEED A SECRET CODE TOKEN!");
+    save.secret_code_tokens--;
+    const roll=Math.random();let result="";
+    if(roll<.28){const p=rollPet();save.pets_owned[p.name]=Number(save.pets_owned[p.name]||0)+1;result="SECRET REWARD: "+p.name+" PET!";}
+    else if(roll<.56){const c=randomCard();save.cards_owned[c[0]]=Number(save.cards_owned[c[0]]||0)+1;result="SECRET REWARD: "+c[0]+" CARD!";}
+    else if(roll<.78){save.candy_gems+=250;result="SECRET REWARD: +250 CANDY GEMS!";}
+    else if(roll<.93){save.fusion_materials.cosmic_core=Number(save.fusion_materials.cosmic_core||0)+1;result="SECRET REWARD: +1 COSMIC CORE!";}
+    else{const pool=["Gem Master","Candy Millionaire","Cosmic Legend"].filter(n=>!save.owned_gem_titles.includes(n));if(pool.length){const title=pool[Math.floor(Math.random()*pool.length)];save.owned_gem_titles.push(title);save.equipped_title=title;result="SECRET REWARD: TITLE "+title+"!";}else{save.candy_gems+=500;result="DUPLICATE TITLE BONUS: +500 GEMS!";}}
+    saveGame();sfxWin();shopPage("special");toast(result);
+}
+function showGemVictoryAnimation(){
+    const id=save.equipped_victory_animation;if(!id)return;
+    const phrases={fireworks:"WAVE CLEARED!",galaxy:"GALAXY VICTORY!",rainbow:"RAINBOW WIN!"};
+    const old=document.getElementById("gemVictoryOverlay");if(old)old.remove();
+    const el=document.createElement("div");el.id="gemVictoryOverlay";el.className="gem-victory-overlay gem-victory-"+(id==="galaxy"?"galaxy":id==="rainbow"?"rainbow":"fireworks");
+    el.innerHTML="<div class='gem-victory-title'>"+esc(phrases[id]||"VICTORY!")+"</div><div class='gem-victory-subtitle'>"+esc(save.equipped_title||"CANDY CHAMPION")+"</div>";
+    document.body.appendChild(el);setTimeout(()=>{if(el.parentNode)el.remove();},2600);
+}
+function applyGemKillEffect(x,y){
+    if(!waveState||!save.equipped_kill_effect)return;
+    const id=save.equipped_kill_effect,cols=id==="starburst"?["#ffe45c","#ffffff","#ff88d8"]:id==="crystal"?["#6beeff","#b7fcff","#a18dff"]:["#ff55b5","#ffda53","#66edff","#86ff75"];
+    const count=id==="candy"?28:18;
+    for(let i=0;i<count;i++){const a=Math.PI*2*i/count,sp=2+Math.random()*5;waveState.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.45+Math.random()*.45,size:3+Math.random()*5,color:cols[i%cols.length]});}
+}
+function shopPage(tab){
+    currentMode="gem-shop";
+    currentGemShopTab=GEM_SHOP_TABS.some(t=>t.id===tab)?tab:(currentGemShopTab||"pets");
+    const tabs=GEM_SHOP_TABS.map(t=>'<button class="'+(currentGemShopTab===t.id?"gold":"purple")+' small" onclick="shopPage(\''+t.id+'\')">'+t.label+'</button>').join("");
+    let content="",heading="";
+    if(currentGemShopTab==="classic"){
+        const cosmetics=GEM_COSMETICS.map(c=>{const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;return '<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid '+c.color+';border-radius:50%;box-shadow:0 0 18px '+c.color+'"></span></div><h2>'+esc(c.name)+'</h2><p>'+esc(c.desc)+'</p><p><b>💎 '+c.cost+'</b></p><button class="'+(eq?"gold":owned?"blue":"purple")+'" onclick="'+(owned?"equipGemCosmetic(\'"+c.id+"\')":"buyGemCosmetic(\'"+c.id+"\')")+'">'+(eq?"EQUIPPED":owned?"EQUIP":"BUY FOR 💎 "+c.cost)+'</button></div>';}).join("");
+        const bundles=GEM_BUNDLES.map(b=>'<div class="panel center"><h2>'+esc(b.name)+'</h2><p>'+esc(b.desc)+'</p><p><b>Cost: 💎 '+b.cost+'</b></p><button class="gold" onclick="buyGemBundle(\''+b.id+'\')">BUY BUNDLE</button></div>').join("");
+        heading="EXISTING BUNDLES & AURAS";
+        content='<h2>GEM BUNDLES</h2><div class="shop-bundle-grid">'+bundles+'</div><h2>GEM COSMETICS / AURAS</h2><div class="panel center"><p>These are separate from the new permanent shop items.</p><p>Equipped: <b>'+esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")+'</b></p><button class="gray" onclick="equipGemCosmetic(\'none\')">REMOVE AURA</button></div><div class="skin-grid">'+cosmetics+'</div>';
+    }else if(currentGemShopTab==="daily"){
+        heading="DAILY ROTATING STOCK";
+        const offers=dailyGemProducts();
+        content='<div class="panel center"><h2>Daily offers • '+new Date().toISOString().slice(0,10)+'</h2><p>Three offers rotate daily. Any item you buy remains saved permanently; only the featured discount changes.</p></div><div class="skin-grid">'+offers.map(p=>gemShopProductCard(p,true)).join("")+'</div>';
+    }else{
+        heading=GEM_SHOP_TABS.find(t=>t.id===currentGemShopTab)?.label||"GEM SHOP";
+        const items=GEM_SHOP_PRODUCTS.filter(p=>p.category===currentGemShopTab);
+        content=items.length?'<div class="skin-grid">'+items.map(p=>gemShopProductCard(p,false)).join("")+'</div>':'<div class="panel center">No items in this section yet.</div>';
+        if(currentGemShopTab==="pets")content+='<div class="panel center"><button class="blue" onclick="fusionLabPage()">OPEN FUSION LAB</button></div>';
+        if(currentGemShopTab==="special")content+='<div class="panel center"><h2>YOUR SPECIAL INVENTORY</h2><p>Revive Tokens: <b>'+save.revive_tokens+'</b> • Fusion Reset Tokens: <b>'+save.fusion_reset_tokens+'</b> • Secret Code Tokens: <b>'+save.secret_code_tokens+'</b></p><button class="gold" onclick="redeemSecretCodeToken()" '+(save.secret_code_tokens>0?"":"disabled")+'>USE SECRET CODE TOKEN</button><button class="purple" onclick="useFusionResetToken()" '+(save.fusion_reset_tokens>0&&save.last_fusion?"":"disabled")+'>USE FUSION RESET TOKEN</button></div>';
+        if(currentGemShopTab==="materials")content+='<div class="panel center"><h2>FUSION MATERIAL INVENTORY</h2><p>Cosmic Cores: <b>'+save.fusion_materials.cosmic_core+'</b> • Rainbow Catalysts: <b>'+save.fusion_materials.rainbow_catalyst+'</b> • Ultimate Fusion Crystals: <b>'+save.fusion_materials.ultimate_fusion_crystal+'</b></p></div>';
+        if(currentGemShopTab==="titles")content+='<div class="panel center"><p>Equipped title: <b>'+esc(save.equipped_title||"None")+'</b></p><button class="gray" onclick="equipGemTitle(\'\')">REMOVE TITLE</button></div>';
+        if(currentGemShopTab==="kill")content+='<div class="panel center"><p>Equipped kill effect: <b>'+esc(save.equipped_kill_effect||"None")+'</b></p><button class="gray" onclick="equipGemKillEffect(\'\')">REMOVE KILL EFFECT</button></div>';
+        if(currentGemShopTab==="victory")content+='<div class="panel center"><p>Equipped victory animation: <b>'+esc(save.equipped_victory_animation||"None")+'</b></p><button class="gray" onclick="equipGemVictoryAnimation(\'\')">REMOVE VICTORY ANIMATION</button></div>';
+        if(currentGemShopTab==="eggs")content+='<div class="panel center"><p>The Mystery Egg Machine gives a permanent pet. Rare tiers are much less likely than Common pets.</p>'+(save.last_egg_pet?'<p>Last hatch: <b>'+esc(save.last_egg_pet)+'</b></p>':"")+'</div>';
+    }
+    render(topbar()+'<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>'+save.candy_credits.toLocaleString()+'</b> • 💎 Candy Gems: <b>'+save.candy_gems.toLocaleString()+'</b></p><button class="purple" onclick="claimDailyGems()">'+(save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎")+'</button><p class="small-text">Permanent purchases stay unlocked in your saved game. Tokens and fusion materials remain in inventory until used.</p><p class="small-text">Earn 3 gems for each new normal wave and 10 for each new boss wave.</p></div><div class="gem-shop-tabs">'+tabs+'</div><h2>'+heading+'</h2>'+content+'<div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>');
+}
+
 function openUpgradeShop(){if(waveState&&!waveState.finished)waveState.running=false;upgradePage();}
 function upgradePage(){
     currentMode="upgrade-shop";
