@@ -364,7 +364,14 @@ const CANDY_CARDS = [
 ["Moonlight Macaron","Mythic"],["Prism Phoenix","Secret"],["Black Hole Bonbon","Exotic"],
 ["Supernova Sugar Dragon","OP"],["Eternal Candy Creator","OC"],["Aurora Jellyfish","Epic"],
 ["Meteor Cookie Titan","Legendary"],["Quantum Gumdrop","Mythic"],["Starlight Candy Guardian","Secret"],
-["Galactic Chipy Champion","OP"],["Rainbow Nebula God","OC"],["Cosmic Cupcake","Uncommon"]
+["Galactic Chipy Champion","OP"],["Rainbow Nebula God","OC"],["Cosmic Cupcake","Uncommon"],
+["Candy Duo","Common"],["Steakpop","Uncommon"],["Broccoli Steak Beast","Rare"],
+["Candy Grove Knight","Rare"],["Golden Superpop","Epic"],["Broccoli Steak Crusher","Epic"],
+["Candy Nature Emperor","Legendary"],["Mythic Steak Candy","Mythic"],["Triple Mythic Feast","Mythic"],
+["Secret Sugar Guardian","Secret"],["Exotic Steak Pop","Exotic"],["Exotic Veggie Feast","Exotic"],
+["OP Candy Titan","OP"],["Origin Steak God","OC"],["Original Food God","OC"],
+["Turbo Prism","Rare"],["Flame Choco Knight","Epic"],["Frost Ninja","Epic"],
+["Galaxy Sweetstorm","Mythic"],["Quantum Star Guardian","Secret"]
 ];
 
 const PETS = [
@@ -412,7 +419,71 @@ const PETS = [
 {name:"Aurora Fox",rarity:"OP",damage:85,speed:2.15,range:70,credits:18},
 {name:"Cosmic Chipy Echo",rarity:"OC",damage:135,speed:2.70,range:95,credits:32},
 {name:"Echo Chipy",rarity:"ULTRA SECRET",damage:1500,speed:100,range:250,credits:250,gemShopOnly:true},
-{name:"Chipy Super Mega",rarity:"ULTRA SECRET",damage:3000,speed:200,range:500,credits:500,fusionOnly:true}
+{name:"Chipy Super Mega",rarity:"ULTRA SECRET",damage:3000,speed:200,range:500,credits:500,fusionOnly:true},
+{name:"Sugar Mouse",rarity:"Uncommon",damage:3,speed:.35,range:5,credits:2,fusionOnly:true},
+{name:"Marshmallow Cat",rarity:"Uncommon",damage:6,speed:.50,range:10,credits:3,fusionOnly:true},
+{name:"Donut Pegasus",rarity:"Rare",damage:8,speed:1.20,range:15,credits:4,fusionOnly:true},
+{name:"Frostfire Fox",rarity:"Rare",damage:12,speed:1.40,range:25,credits:5,fusionOnly:true},
+{name:"Inferno Candy Dragon",rarity:"Epic",damage:30,speed:1.00,range:35,credits:8,fusionOnly:true},
+{name:"Stormfang Wolf",rarity:"Epic",damage:32,speed:2.40,range:40,credits:9,fusionOnly:true},
+{name:"Prism Dragon",rarity:"Legendary",damage:40,speed:2.50,range:50,credits:12,fusionOnly:true},
+{name:"Galaxy Phoenix",rarity:"Legendary",damage:55,speed:2.80,range:70,credits:16,fusionOnly:true},
+{name:"Voidstar Cat",rarity:"Mythic",damage:60,speed:3.00,range:70,credits:18,fusionOnly:true},
+{name:"Glitch Ghost",rarity:"Mythic",damage:75,speed:2.80,range:80,credits:20,fusionOnly:true},
+{name:"Shadow Diamond Spirit",rarity:"Secret",damage:95,speed:3.20,range:100,credits:25,fusionOnly:true},
+{name:"Crystal Wolf",rarity:"Secret",damage:100,speed:3.50,range:110,credits:28,fusionOnly:true},
+{name:"Ultimate Lollipop Dragon",rarity:"Exotic",damage:150,speed:4.00,range:140,credits:40,fusionOnly:true},
+{name:"Origin Candy Godling",rarity:"OP",damage:180,speed:4.40,range:160,credits:50,fusionOnly:true},
+{name:"Rainbow Void Deity",rarity:"OC",damage:250,speed:5.00,range:200,credits:75,fusionOnly:true},
+{name:"Airhead Swirl",rarity:"Rare",damage:20,speed:2.50,range:40,credits:10,fusionOnly:true},
+{name:"Caramel Nebula Fox",rarity:"Epic",damage:70,speed:3.50,range:90,credits:23,fusionOnly:true},
+{name:"Comet Prism Kitten",rarity:"Rare",damage:22,speed:2.50,range:40,credits:10,fusionOnly:true},
+{name:"Moon Mochi Axolotl",rarity:"Epic",damage:30,speed:3.00,range:55,credits:15,fusionOnly:true},
+{name:"Black Hole Supernova Owl",rarity:"OP",damage:120,speed:4.20,range:150,credits:45,fusionOnly:true}
+];
+
+const FUSION_RECIPES = [
+{type:"pet",ingredients:["Chipy","Echo Chipy"],result:"Chipy Super Mega",legacy:true},
+{type:"pet",ingredients:["Candy Worm","Gumdrop Mouse"],result:"Sugar Mouse"},
+{type:"pet",ingredients:["Marshmallow Bunny","Cookie Cat"],result:"Marshmallow Cat"},
+{type:"pet",ingredients:["Donut Puppy","Cupcake Bird"],result:"Donut Pegasus"},
+{type:"pet",ingredients:["Chocolate Fox","Ice Cream Bunny"],result:"Frostfire Fox"},
+{type:"pet",ingredients:["Candy Dragon","Fire Candy Dragon"],result:"Inferno Candy Dragon"},
+{type:"pet",ingredients:["Frozen Cookie Wolf","Electric Lollipop Bat"],result:"Stormfang Wolf"},
+{type:"pet",ingredients:["Golden Candy Dragon","Rainbow Bunny"],result:"Prism Dragon"},
+{type:"pet",ingredients:["Candy Phoenix","Galaxy Dragon"],result:"Galaxy Phoenix"},
+{type:"pet",ingredients:["Void Candy Cat","Star Sugar Wolf"],result:"Voidstar Cat"},
+{type:"pet",ingredients:["Ghost Candy","Glitched Cookie"],result:"Glitch Ghost"},
+{type:"pet",ingredients:["Shadow Lollipop","Diamond Candy Dragon"],result:"Shadow Diamond Spirit"},
+{type:"pet",ingredients:["Star Candy Wolf","Crystal Sugar Fox"],result:"Crystal Wolf"},
+{type:"pet",ingredients:["Ultimate Candy Dragon","Overpowered Lollipop"],result:"Ultimate Lollipop Dragon"},
+{type:"pet",ingredients:["Original Candy God","Original Void Dragon"],result:"Origin Candy Godling"},
+{type:"pet",ingredients:["Original Rainbow God","Cosmic Chipy Echo"],result:"Rainbow Void Deity"},
+{type:"pet",ingredients:["Flying Airhead","Swedish Fish"],result:"Airhead Swirl"},
+{type:"pet",ingredients:["Caramel Apple","Aurora Fox"],result:"Caramel Nebula Fox"},
+{type:"pet",ingredients:["Comet Kitten","Prism Dragonling"],result:"Comet Prism Kitten"},
+{type:"pet",ingredients:["Moon Mochi","Nebula Axolotl"],result:"Moon Mochi Axolotl"},
+{type:"pet",ingredients:["Supernova Owl","Black Hole Bunny"],result:"Black Hole Supernova Owl"},
+{type:"card",ingredients:["Red Lollipop","Green Broccoli"],result:"Candy Duo"},
+{type:"card",ingredients:["Brown Steak","Big Lollipop"],result:"Steakpop"},
+{type:"card",ingredients:["Angry Broccoli","Juicy Steak"],result:"Broccoli Steak Beast"},
+{type:"card",ingredients:["Candy Warrior","Mega Broccoli"],result:"Candy Grove Knight"},
+{type:"card",ingredients:["Golden Steak","Super Lollipop"],result:"Golden Superpop"},
+{type:"card",ingredients:["Broccoli Beast","Steak Crusher"],result:"Broccoli Steak Crusher"},
+{type:"card",ingredients:["Candy King","Broccoli King"],result:"Candy Nature Emperor"},
+{type:"card",ingredients:["Steak King","Mythic Candy"],result:"Mythic Steak Candy"},
+{type:"card",ingredients:["Mythic Broccoli","Mythic Steak"],result:"Triple Mythic Feast"},
+{type:"card",ingredients:["Secret Lollipop","Secret Broccoli"],result:"Secret Sugar Guardian"},
+{type:"card",ingredients:["Secret Steak","Exotic Candy"],result:"Exotic Steak Pop"},
+{type:"card",ingredients:["Exotic Broccoli","Exotic Steak"],result:"Exotic Veggie Feast"},
+{type:"card",ingredients:["OP Lollipop","OP Broccoli"],result:"OP Candy Titan"},
+{type:"card",ingredients:["OP Steak","OC Candy God"],result:"Origin Steak God"},
+{type:"card",ingredients:["OC Broccoli God","OC Steak God"],result:"Original Food God"},
+{type:"card",ingredients:["Crystal Lollipop","Turbo Broccoli"],result:"Turbo Prism"},
+{type:"card",ingredients:["Fire Steak","Chocolate Knight"],result:"Flame Choco Knight"},
+{type:"card",ingredients:["Candy Ninja","Ice Cream Warrior"],result:"Frost Ninja"},
+{type:"card",ingredients:["Galaxy Lollipop","Galaxy Broccoli"],result:"Galaxy Sweetstorm"},
+{type:"card",ingredients:["Quantum Gumdrop","Starlight Candy Guardian"],result:"Quantum Star Guardian"}
 ];
 
 const SKINS = [
@@ -796,10 +867,10 @@ function renderCard(c){
 }
 function equipCard(encoded){const name=decodeURIComponent(encoded);if(!save.cards_owned[name])return toast("YOU DO NOT OWN THAT CARD!");save.equipped_card=name;saveGame();toast(name+" EQUIPPED!");cardsPage();}
 function weightedRarity(){let roll=Math.random()*100,total=0;for(const r of RARITIES){total+=RARITY_CHANCES[r];if(roll<=total)return r;}return "Common";}
-function randomCard(){const r=weightedRarity();const list=CANDY_CARDS.filter(c=>c[1]===r);return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS[0];}
+function randomCard(){const r=weightedRarity();const fusedNames=new Set(FUSION_RECIPES.filter(x=>x.type==="card").map(x=>x.result));const list=CANDY_CARDS.filter(c=>c[1]===r&&!fusedNames.has(c[0]));return list[Math.floor(Math.random()*list.length)]||CANDY_CARDS.find(c=>!fusedNames.has(c[0]))||CANDY_CARDS[0];}
 function randomPet(){
     // Chipy is excluded from ordinary random rolls so his custom drop chance is respected.
-    const ordinaryPets=PETS.filter(p=>!["Chipy","Echo Chipy","Chipy Super Mega"].includes(p.name));
+    const ordinaryPets=PETS.filter(p=>!p.fusionOnly&&!p.gemShopOnly&&p.name!=="Chipy");
     return ordinaryPets[Math.floor(Math.random()*ordinaryPets.length)];
 }
 function rollPet(){
@@ -1051,46 +1122,61 @@ function petsPage(){
 }
 function fusionLabPage(){
     currentMode="fusion-lab";
-    const chipyCount=Number(save.pets_owned["Chipy"]||0);
-    const echoCount=Number(save.pets_owned["Echo Chipy"]||0);
-    const megaCount=Number(save.pets_owned["Chipy Super Mega"]||0);
-    const canFuse=chipyCount>0&&echoCount>0;
-    render(`${topbar()}<div class="section"><h1>✨ CHIPY FUSION LAB</h1>
-    <div class="panel center"><h2>EXCLUSIVE SECRET FUSION</h2>
-    <p>Fuse <b>1 Chipy</b> + <b>1 Echo Chipy</b> to create <b>Chipy Super Mega</b>.</p>
-    <p>This result is <b>FUSION ONLY</b>. It can never appear in card packs or wave drops.</p>
-    <div class="skill-row" style="margin:16px 0">
-      <div class="pet-card" style="border-color:#ff4dff"><canvas class="pet-canvas" width="180" height="105" data-pet="Chipy"></canvas><div class="card-name">Chipy</div><b>OWNED: x${chipyCount}</b></div>
-      <div style="font-size:34px;align-self:center">+</div>
-      <div class="pet-card" style="border-color:#8deaff"><canvas class="pet-canvas" width="180" height="105" data-pet="Echo Chipy"></canvas><div class="card-name">Echo Chipy</div><b>OWNED: x${echoCount}</b></div>
-      <div style="font-size:34px;align-self:center">→</div>
-      <div class="pet-card" style="border-color:#ffe45c"><canvas class="pet-canvas" width="180" height="105" data-pet="Chipy Super Mega"></canvas><div class="card-name">Chipy Super Mega</div><b>OWNED: x${megaCount}</b></div>
-    </div>
-    <div class="panel"><h2>CHIPY SUPER MEGA STATS</h2><p><b>Damage: 3,000</b> • <b>Speed: 200</b> • <b>Range: 500</b> • <b>Candy bonus: +500 per enemy defeated</b></p></div>
-    <button class="gold" onclick="fuseChipySuperMega()" ${canFuse?"":"disabled"}>FUSE CHIPY + ECHO CHIPY</button>
-    <p style="margin-top:12px">${canFuse?"You have both ingredients. Fusion consumes one of each.":"You need one Chipy and one Echo Chipy."}</p>
-    <button class="purple" onclick="shopPage()">GET ECHO CHIPY IN GEM SHOP</button>
-    <button class="blue" onclick="petsPage()">BACK TO PETS</button></div></div>`);
+    const petFusions=FUSION_RECIPES.filter(r=>r.type==="pet");
+    const cardFusions=FUSION_RECIPES.filter(r=>r.type==="card");
+    const recipeCard=(recipe,index)=>{
+        const inventory=recipe.type==="pet"?save.pets_owned:save.cards_owned;
+        const amounts=recipe.ingredients.map(name=>Number(inventory[name]||0));
+        const ready=recipe.ingredients.every((name,i)=>amounts[i]>=1);
+        const outputPet=recipe.type==="pet"?PETS.find(p=>p.name===recipe.result):null;
+        const outputCard=recipe.type==="card"?CANDY_CARDS.find(c=>c[0]===recipe.result):null;
+        const rarity=outputPet?outputPet.rarity:(outputCard?outputCard[1]:"Secret");
+        const ingredientsHtml=recipe.ingredients.map((name,i)=>`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #ffffff16"><span>${esc(name)}</span><b style="color:${amounts[i]>0?"#7dffad":"#ff8b8b"}">x${amounts[i]}</b></div>`).join("");
+        const stats=outputPet?`<div class="small-text">Damage ${outputPet.damage} • Speed ${outputPet.speed} • Range ${outputPet.range} • Candy +${outputPet.credits}</div>`:`<div class="small-text">Card rarity: ${esc(rarity)}</div>`;
+        return `<div class="panel" style="border:1px solid ${RARITY_COLORS[rarity]||"#a58cff"};min-width:0;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:12px;color:#aeb8d2">${recipe.type==="pet"?"PET FUSION":"CARD FUSION"} #${index+1}</b><b style="font-size:11px;color:${RARITY_COLORS[rarity]||"#a58cff"}">${esc(rarity)}</b></div>
+          <div style="font-size:15px;font-weight:900;line-height:1.25">${ingredientsHtml}</div>
+          <div style="text-align:center;color:#ffd861;font-size:20px;font-weight:1000">↓ FUSE ↓</div>
+          <div style="text-align:center;font-weight:1000;font-size:16px">${esc(recipe.result)}</div>
+          ${stats}
+          <button class="${recipe.type==="pet"?"purple":"gold"}" onclick="fuseRecipe(${index})" ${ready?"":"disabled"}>${ready?"FUSE NOW":"NEED INGREDIENTS"}</button>
+        </div>`;
+    };
+    const petRecipes=petFusions.map(r=>recipeCard(r,FUSION_RECIPES.indexOf(r))).join("");
+    const cardRecipes=cardFusions.map(r=>recipeCard(r,FUSION_RECIPES.indexOf(r))).join("");
+    render(`${topbar()}<div class="section"><h1>FUSION LAB</h1>
+      <div class="panel center"><h2>40 NEW FUSIONS!</h2><p>20 pet fusions + 20 card fusions, plus the original Chipy Super Mega fusion.</p><p>Fusions consume one copy of each ingredient and permanently unlock the result. Fused results never drop from packs or waves.</p>
+      <div class="skill-row"><button class="purple" onclick="petsPage()">PET COLLECTION</button><button class="gold" onclick="cardsPage()">CARD COLLECTION</button><button class="blue" onclick="shopPage()">CANDY GEM SHOP</button></div></div>
+      <h2 style="margin:18px 0 10px">PET FUSIONS (21)</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px">${petRecipes}</div>
+      <h2 style="margin:22px 0 10px">CARD FUSIONS (20)</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px">${cardRecipes}</div>
+    </div>`);
     paintPetCanvases();
 }
-function fuseChipySuperMega(){
-    const chipyCount=Number(save.pets_owned["Chipy"]||0);
-    const echoCount=Number(save.pets_owned["Echo Chipy"]||0);
-    if(chipyCount<1||echoCount<1){
-        sfxError();
-        toast("YOU NEED 1 CHIPY + 1 ECHO CHIPY!");
-        fusionLabPage();
-        return;
+function fuseRecipe(index){
+    const recipe=FUSION_RECIPES[index];
+    if(!recipe){toast("FUSION RECIPE NOT FOUND!");return;}
+    const isPet=recipe.type==="pet";
+    const inventory=isPet?save.pets_owned:save.cards_owned;
+    const needs={};
+    for(const ingredient of recipe.ingredients)needs[ingredient]=(needs[ingredient]||0)+1;
+    for(const [name,amount] of Object.entries(needs)){
+        if(Number(inventory[name]||0)<amount){
+            sfxError();
+            toast("YOU NEED MORE "+name.toUpperCase()+"!");
+            fusionLabPage();
+            return;
+        }
     }
-    save.pets_owned["Chipy"]=chipyCount-1;
-    save.pets_owned["Echo Chipy"]=echoCount-1;
-    save.pets_owned["Chipy Super Mega"]=Number(save.pets_owned["Chipy Super Mega"]||0)+1;
-    save.equipped_pet="Chipy Super Mega";
+    for(const [name,amount] of Object.entries(needs))inventory[name]=Number(inventory[name]||0)-amount;
+    inventory[recipe.result]=Number(inventory[recipe.result]||0)+1;
+    if(isPet)save.equipped_pet=recipe.result;
+    else save.equipped_card=recipe.result;
     saveGame();
     sfxWin();
     fusionLabPage();
-    toast("FUSION SUCCESS! CHIPY SUPER MEGA UNLOCKED!");
+    toast("FUSION SUCCESS! "+recipe.result.toUpperCase()+" UNLOCKED!");
 }
+function fuseChipySuperMega(){return fuseRecipe(0);}
 function buyEchoChipy(){
     const cost=500;
     if(save.candy_gems<cost){
@@ -2279,7 +2365,7 @@ function redeemSecretCode(){
         result="RICH CODE REDEEMED! +2,000 CANDY CREDITS AND +500 CANDY GEMS.";
     }else if(code==="admin"){
         // Unlock all collection content and all replayable waves/skins.
-        for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
+        for(const c of CANDY_CARDS)if(!FUSION_RECIPES.some(r=>r.type==="card"&&r.result===c[0]))save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
         for(const p of PETS){if(!p.gemShopOnly&&!p.fusionOnly)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));}
         save.highest_wave_cleared=MAX_WAVES;
         save.candy_credits+=10000;
