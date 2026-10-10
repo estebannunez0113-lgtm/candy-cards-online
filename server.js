@@ -22,11 +22,11 @@ const pool = process.env.DATABASE_URL ? new Pool({
 }) : null;
 
 const USD_GEM_PACKAGES = Object.freeze({
-    starter: { id: 'starter', name: 'Starter Gem Pack', gems: 500, amount: 99 },
-    popular: { id: 'popular', name: 'Popular Gem Pack', gems: 1800, amount: 299 },
-    mega: { id: 'mega', name: 'Mega Gem Pack', gems: 3500, amount: 499 },
-    ultra: { id: 'ultra', name: 'Ultra Gem Pack', gems: 8000, amount: 999 },
-    legendary: { id: 'legendary', name: 'Legendary Gem Pack', gems: 18000, amount: 1999 }
+    starter: { id: 'starter', name: 'Starter Gem Subscription', gems: 500, amount: 99 },
+    popular: { id: 'popular', name: 'Popular Gem Subscription', gems: 1800, amount: 299 },
+    mega: { id: 'mega', name: 'Mega Gem Subscription', gems: 3500, amount: 499 },
+    ultra: { id: 'ultra', name: 'Ultra Gem Subscription', gems: 8000, amount: 999 },
+    legendary: { id: 'legendary', name: 'Legendary Gem Subscription', gems: 18000, amount: 1999 }
 });
 function paymentsConfigured(){return Boolean(stripe&&STRIPE_WEBHOOK_SECRET&&pool);}
 let paymentSchemaPromise=null;
@@ -44,6 +44,16 @@ async function ensurePaymentSchema(){
       );
       CREATE INDEX IF NOT EXISTS candy_gem_orders_player_idx
         ON candy_gem_purchase_orders(player_id,created_at DESC);
+      CREATE TABLE IF NOT EXISTS candy_gem_subscriptions(
+        stripe_subscription_id TEXT PRIMARY KEY, player_id TEXT NOT NULL, package_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS candy_gem_subscription_invoices(
+        stripe_invoice_id TEXT PRIMARY KEY, stripe_subscription_id TEXT NOT NULL,
+        player_id TEXT NOT NULL, gems INTEGER NOT NULL, amount_cents INTEGER NOT NULL,
+        paid_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
     await paymentSchemaPromise;
 }
@@ -66,31 +76,58 @@ function readRequestBody(req,limit=16384){
     });
 }
 function validPlayerId(v){return typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);}
-async function fulfillPaidGemSession(session){
-    if(!pool||!session||session.mode!=='payment'||session.payment_status!=='paid'||session.currency!=='usd')return;
+async function recordGemSubscriptionSession(session){
+    if(!pool||!session||session.mode!=='subscription'||!session.subscription)return;
     const playerId=session.metadata&&session.metadata.player_id;
     const packageId=session.metadata&&session.metadata.package_id;
     const product=USD_GEM_PACKAGES[packageId];
-    if(!validPlayerId(playerId)||!product)throw new Error('Invalid paid-gem session metadata.');
-    if(Number(session.metadata.gems)!==product.gems||Number(session.amount_total)!==product.amount)
-        throw new Error('Paid-gem session values do not match the server catalog.');
+    if(!validPlayerId(playerId)||!product)throw new Error('Invalid gem subscription metadata.');
+    const subId=typeof session.subscription==='string'?session.subscription:session.subscription.id;
+    await ensurePaymentSchema();
+    await pool.query(
+        `INSERT INTO candy_gem_subscriptions(stripe_subscription_id,player_id,package_id,status)
+         VALUES($1,$2,$3,'active')
+         ON CONFLICT(stripe_subscription_id) DO UPDATE SET status='active',updated_at=NOW()
+         WHERE candy_gem_subscriptions.player_id=EXCLUDED.player_id AND candy_gem_subscriptions.package_id=EXCLUDED.package_id`,
+        [subId,playerId,product.id]
+    );
+    await pool.query("UPDATE candy_gem_purchase_orders SET status='subscription_created' WHERE session_id=$1",[session.id]);
+}
+
+async function fulfillPaidGemInvoice(invoice){
+    if(!pool||!stripe||!invoice||invoice.status!=='paid'||invoice.currency!=='usd')return;
+    const subId=typeof invoice.subscription==='string'?invoice.subscription:
+        (invoice.subscription&&invoice.subscription.id);
+    if(!subId)return;
+    const billingReason=invoice.billing_reason;
+    if(billingReason!=='subscription_create'&&billingReason!=='subscription_cycle')return;
+    const subscription=await stripe.subscriptions.retrieve(subId);
+    const playerId=subscription.metadata&&subscription.metadata.player_id;
+    const packageId=subscription.metadata&&subscription.metadata.package_id;
+    const product=USD_GEM_PACKAGES[packageId];
+    if(!validPlayerId(playerId)||!product)throw new Error('Invalid gem subscription metadata on invoice.');
+    if(Number(invoice.amount_paid)!==product.amount)throw new Error('Subscription invoice amount does not match server catalog.');
     await ensurePaymentSchema();
     const client=await pool.connect();
     try{
         await client.query('BEGIN');
-        const result=await client.query('SELECT * FROM candy_gem_purchase_orders WHERE session_id=$1 FOR UPDATE',[session.id]);
-        const order=result.rows[0];
-        if(!order)throw new Error('Paid-gem order was not found; Stripe will retry the webhook.');
-        if(order.player_id!==playerId||order.package_id!==product.id||Number(order.gems)!==product.gems||Number(order.amount_cents)!==product.amount)
-            throw new Error('Order does not match the paid Stripe session.');
-        if(order.status!=='fulfilled'){
+        const known=await client.query('SELECT * FROM candy_gem_subscriptions WHERE stripe_subscription_id=$1 FOR UPDATE',[subId]);
+        if(!known.rows.length||known.rows[0].player_id!==playerId||known.rows[0].package_id!==product.id)
+            throw new Error('Subscription record does not match the paid invoice.');
+        const inserted=await client.query(
+            `INSERT INTO candy_gem_subscription_invoices(stripe_invoice_id,stripe_subscription_id,player_id,gems,amount_cents)
+             VALUES($1,$2,$3,$4,$5) ON CONFLICT(stripe_invoice_id) DO NOTHING RETURNING stripe_invoice_id`,
+            [invoice.id,subId,playerId,product.gems,product.amount]
+        );
+        if(inserted.rows.length){
             await client.query('INSERT INTO candy_paid_gem_wallets(player_id,paid_gems) VALUES($1,0) ON CONFLICT(player_id) DO NOTHING',[playerId]);
             await client.query('UPDATE candy_paid_gem_wallets SET paid_gems=paid_gems+$2,updated_at=NOW() WHERE player_id=$1',[playerId,product.gems]);
-            await client.query("UPDATE candy_gem_purchase_orders SET status='fulfilled',paid_at=NOW() WHERE session_id=$1",[session.id]);
+            await client.query('UPDATE candy_gem_subscriptions SET status=$2,updated_at=NOW() WHERE stripe_subscription_id=$1',[subId,subscription.status||'active']);
         }
         await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
 }
+
 async function handlePaymentApi(req,res,pathname){
     if(pathname==='/api/purchase/config'&&req.method==='GET'){
         sendJson(res,200,{enabled:paymentsConfigured(),currency:'USD',packages:Object.values(USD_GEM_PACKAGES).map(p=>({id:p.id,name:p.name,gems:p.gems,priceCents:p.amount}))});return;
@@ -103,7 +140,15 @@ async function handlePaymentApi(req,res,pathname){
         catch{sendJson(res,400,{error:'Invalid Stripe webhook signature.'});return;}
         if(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded'){
             const session=event.data.object;
-            if(session.payment_status==='paid')await fulfillPaidGemSession(session);
+            if(session.mode==='subscription')await recordGemSubscriptionSession(session);
+        }else if(event.type==='invoice.paid'){
+            await fulfillPaidGemInvoice(event.data.object);
+        }else if(event.type==='customer.subscription.updated'||event.type==='customer.subscription.deleted'){
+            const sub=event.data.object;
+            if(sub&&sub.id){
+                await ensurePaymentSchema();
+                await pool.query('UPDATE candy_gem_subscriptions SET status=$2,updated_at=NOW() WHERE stripe_subscription_id=$1',[sub.id,sub.status||'canceled']);
+            }
         }
         sendJson(res,200,{received:true});return;
     }
@@ -115,9 +160,13 @@ async function handlePaymentApi(req,res,pathname){
         const playerId=body&&body.playerId,product=USD_GEM_PACKAGES[body&&body.packageId];
         if(!validPlayerId(playerId)||!product){sendJson(res,400,{error:'Invalid player ID or gem package.'});return;}
         const session=await stripe.checkout.sessions.create({
-            mode:'payment',payment_method_types:['card'],
-            line_items:[{quantity:1,price_data:{currency:'usd',unit_amount:product.amount,product_data:{name:product.name,description:product.gems.toLocaleString('en-US')+' Candy Cards gems'}}}],
+            mode:'subscription',payment_method_types:['card'],
+            line_items:[{quantity:1,price_data:{
+                currency:'usd',unit_amount:product.amount,recurring:{interval:'month'},
+                product_data:{name:product.name,description:product.gems.toLocaleString('en-US')+' Candy Cards gems granted every month'}
+            }}],
             metadata:{player_id:playerId,package_id:product.id,gems:String(product.gems)},
+            subscription_data:{metadata:{player_id:playerId,package_id:product.id,gems:String(product.gems)}},
             success_url:APP_BASE_URL+'/?cashgems=success&session_id={CHECKOUT_SESSION_ID}',
             cancel_url:APP_BASE_URL+'/?cashgems=cancelled'
         });
@@ -137,7 +186,7 @@ async function handlePaymentApi(req,res,pathname){
         const r=await pool.query('SELECT gems,status FROM candy_gem_purchase_orders WHERE session_id=$1 AND player_id=$2',[sessionId,playerId]);
         if(!r.rows.length){sendJson(res,404,{status:'pending'});return;}
         const w=await pool.query('SELECT paid_gems FROM candy_paid_gem_wallets WHERE player_id=$1',[playerId]);
-        sendJson(res,200,{status:r.rows[0].status,gems:Number(r.rows[0].gems),paidGems:Number(w.rows[0]?.paid_gems||0)});return;
+        sendJson(res,200,{status:r.rows[0].status==='subscription_created'?'fulfilled':r.rows[0].status,gems:Number(r.rows[0].gems),paidGems:Number(w.rows[0]?.paid_gems||0)});return;
     }
     if(pathname==='/api/paid-gems/spend'&&req.method==='POST'){
         const raw=await readRequestBody(req);let body;
