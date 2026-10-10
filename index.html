@@ -885,7 +885,7 @@ function render(html){
     root.querySelectorAll("[data-language-anchor]").forEach(x=>x.innerHTML=languageSelectorHtml());
 }
 
-function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">💎 ${Number(save.candy_gems)||0}</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div>${save.equipped_title?'<div class="pill gem-title-pill">'+esc(save.equipped_title)+'</div>':''}<div class="lang-top">${languageSelectorHtml()}</div></div>`;}
+function topbar(){return `<div class="topbar"><button class="gray small" onclick="menu()">BACK</button><div class="pill">Candy: ${save.candy_credits}</div><div class="pill">💎 ${Number(save.candy_gems)||0}</div><div class="pill">💳 ${Number(paidGemWallet)||0} paid</div><div class="pill">Wave: ${save.current_wave}/${MAX_WAVES}</div><div class="pill">Cards: ${countCards()}/${CANDY_CARDS.length}</div><div class="spacer"></div><div class="pill">${esc(currentRank().name)}: ${save.trophies}</div>${save.equipped_title?'<div class="pill gem-title-pill">'+esc(save.equipped_title)+'</div>':''}<div class="lang-top">${languageSelectorHtml()}</div></div>`;}
 
 // ================================================================
 // OG MAIN MENU — same important positions from main.py
@@ -1414,14 +1414,85 @@ const GEM_SHOP_PRODUCTS = [
 {id:"victory_galaxy",category:"victory",name:"Galaxy Portal Victory",cost:900,type:"victory",reward:"galaxy",desc:"A cosmic portal victory animation."},
 {id:"victory_rainbow",category:"victory",name:"Rainbow Burst Victory",cost:1200,type:"victory",reward:"rainbow",desc:"A rainbow celebration when you clear a wave."}
 ];
+
+const CASH_GEM_PACKS=[
+{id:"starter",name:"Starter",gems:500,price:"$0.99"},
+{id:"popular",name:"Popular",gems:1800,price:"$2.99",featured:true},
+{id:"mega",name:"Mega",gems:3500,price:"$4.99"},
+{id:"ultra",name:"Ultra",gems:8000,price:"$9.99"},
+{id:"legendary",name:"Legendary",gems:18000,price:"$19.99"}
+];
 const GEM_SHOP_TABS=[
 {id:"pets",label:"PETS"},{id:"skins",label:"SKINS"},{id:"cards",label:"CARDS"},{id:"materials",label:"FUSION MATERIALS"},
 {id:"eggs",label:"MYSTERY EGGS"},{id:"boosts",label:"PERMANENT BOOSTS"},{id:"special",label:"SPECIAL ITEMS"},
 {id:"titles",label:"TITLES"},{id:"kill",label:"KILL EFFECTS"},{id:"victory",label:"VICTORY ANIMATIONS"},
-{id:"daily",label:"DAILY STOCK"},{id:"classic",label:"OLD BUNDLES & AURAS"}
+{id:"daily",label:"DAILY STOCK"},{id:"money",label:"BUY GEMS WITH USD"},{id:"classic",label:"OLD BUNDLES & AURAS"}
 ];
 const GEM_DAILY_STOCK_IDS=["pet_void_dragon","card_plasma","skin_plasma","mat_cosmic_core","title_gem_master","kill_starburst","victory_fireworks","pet_candy_godzilla","card_candy_god","mat_ultimate_crystal","title_cosmic_legend"];
 let currentGemShopTab="pets";
+
+let paidGemWallet=0;
+let cashPurchasesEnabled=false;
+function getCashPurchasePlayerId(){
+    const key="candyCardsPaidGemPlayerId";
+    try{
+        let id=localStorage.getItem(key)||"";
+        if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return id;
+        id=window.crypto&&typeof window.crypto.randomUUID==="function"?window.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==="x"?r:(r&3|8)).toString(16);});
+        localStorage.setItem(key,id);return id;
+    }catch{return "00000000-0000-4000-8000-000000000001";}
+}
+const cashPurchasePlayerId=getCashPurchasePlayerId();
+async function refreshPaidGemWallet(){
+    try{
+        const c=await fetch("/api/purchase/config",{cache:"no-store"}).then(r=>r.json());
+        cashPurchasesEnabled=!!(c&&c.enabled);
+        if(!cashPurchasesEnabled){paidGemWallet=0;return;}
+        const r=await fetch("/api/paid-gems/wallet?playerId="+encodeURIComponent(cashPurchasePlayerId),{cache:"no-store"});
+        const d=await r.json();if(r.ok)paidGemWallet=Math.max(0,Number(d.paidGems)||0);
+    }catch{cashPurchasesEnabled=false;}
+}
+async function buyUsdGemPack(packageId){
+    if(!cashPurchasesEnabled){toast("USD CHECKOUT IS NOT SET UP YET. NO CHARGE WAS MADE.");return;}
+    const p=CASH_GEM_PACKS.find(x=>x.id===packageId);if(!p)return toast("GEM PACK NOT FOUND.");
+    try{
+        const r=await fetch("/api/purchase/create",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({packageId:p.id,playerId:cashPurchasePlayerId})});
+        const d=await r.json();if(!r.ok||!d.url)throw new Error(d.error||"Checkout could not start.");
+        window.location.href=d.url;
+    }catch(e){toast(e.message||"Checkout could not start.");}
+}
+async function initializeUsdGemPurchases(){
+    const q=new URLSearchParams(window.location.search),outcome=q.get("cashgems"),sid=q.get("session_id");
+    if(outcome==="cancelled")toast("PAYMENT CANCELLED. NO GEMS WERE CHARGED.");
+    else if(outcome==="success"&&sid){
+        toast("CHECKING PAYMENT WITH STRIPE...");
+        let done=false;
+        for(let n=0;n<12;n++){
+            try{
+                const r=await fetch("/api/purchase/status?playerId="+encodeURIComponent(cashPurchasePlayerId)+"&sessionId="+encodeURIComponent(sid),{cache:"no-store"});
+                const d=await r.json();
+                if(r.ok&&d.status==="fulfilled"){paidGemWallet=Math.max(0,Number(d.paidGems)||0);done=true;break;}
+            }catch{}
+            await new Promise(resolve=>setTimeout(resolve,1000));
+        }
+        toast(done?"PAYMENT CONFIRMED! YOUR PAID GEMS ARE SAVED.":"PAYMENT IS STILL PROCESSING. CHECK THE USD GEMS TAB AGAIN SOON.");
+    }
+    if(outcome)window.history.replaceState({},document.title,window.location.pathname+window.location.hash);
+    await refreshPaidGemWallet();
+    if(currentMode==="gem-shop"&&currentGemShopTab==="money")shopPage("money");
+}
+async function payGemShopCost(cost){
+    const free=Math.max(0,Number(save.candy_gems)||0);
+    if(free>=cost){save.candy_gems=free-cost;return true;}
+    const needed=cost-free;
+    if(!cashPurchasesEnabled){sfxError();toast("NOT ENOUGH CANDY GEMS!");return false;}
+    try{
+        const r=await fetch("/api/paid-gems/spend",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({playerId:cashPurchasePlayerId,amount:needed})});
+        const d=await r.json();if(!r.ok)throw new Error(d.error||"Not enough paid gems.");
+        save.candy_gems=0;paidGemWallet=Math.max(0,Number(d.paidGems)||0);return true;
+    }catch(e){sfxError();toast(e.message||"NOT ENOUGH CANDY GEMS!");return false;}
+}
+
 function getGemProductCost(item){return item.type==="slot"?600*Math.pow(2,Math.max(0,Number(save.extra_pet_slots)||0)):item.cost;}
 function gemProductOwned(item){
     if(item.type==="skin")return save.owned_gem_skins.includes(item.reward)||(()=>{const sk=SKINS.find(x=>x[0]===item.reward);return !!sk&&(highestWaveCleared()>=sk[1]||save.current_wave>=sk[1]);})();
@@ -1482,7 +1553,7 @@ function gemShopProductCard(item,daily){
     if(item.type==="slot")extra="<p class='small-text'>Extra slots purchased: "+save.extra_pet_slots+"/3</p>";
     return "<div class='skin-box gem-product-card'><div class='gem-product-icon'>"+(icons[item.type]||"✧")+"</div><h2>"+esc(item.name)+"</h2><p>"+esc(item.desc)+"</p><p class='gem-product-cost'><b>GEMS: "+cost.toLocaleString()+"</b>"+(daily?" <span class='daily-discount'>DAILY DEAL</span>":"")+"</p>"+extra+"<button class='"+(owned?"blue":"purple")+"' onclick=\""+action+"\" "+(disabled?"disabled":"")+">"+label+"</button></div>";
 }
-function buyGemProduct(id,daily){
+async function buyGemProduct(id,daily){
     const item=GEM_SHOP_PRODUCTS.find(x=>x.id===id);
     if(!item){toast("GEM SHOP ITEM NOT FOUND!");return;}
     let offer=null;if(daily){offer=dailyGemProducts().find(x=>x.id===id);if(!offer)return toast("THAT ITEM IS NOT IN TODAY'S STOCK!");}
@@ -1495,8 +1566,7 @@ function buyGemProduct(id,daily){
         if(item.type==="victory")return equipGemVictoryAnimation(item.reward);
         return toast("YOU ALREADY OWN THIS PERMANENT UPGRADE!");
     }
-    if(Number(save.candy_gems)<cost){sfxError();toast("NOT ENOUGH CANDY GEMS!");return;}
-    save.candy_gems-=cost;
+    if(!await payGemShopCost(cost))return;
     if(item.type==="pet")save.pets_owned[item.reward]=Number(save.pets_owned[item.reward]||0)+1;
     else if(item.type==="card")save.cards_owned[item.reward]=Number(save.cards_owned[item.reward]||0)+1;
     else if(item.type==="skin"){if(!save.owned_gem_skins.includes(item.reward))save.owned_gem_skins.push(item.reward);}
@@ -1562,7 +1632,11 @@ function shopPage(tab){
     currentGemShopTab=GEM_SHOP_TABS.some(t=>t.id===tab)?tab:(currentGemShopTab||"pets");
     const tabs=GEM_SHOP_TABS.map(t=>'<button class="'+(currentGemShopTab===t.id?"gold":"purple")+' small" onclick="shopPage(&quot;'+t.id+'&quot;)">'+t.label+'</button>').join("");
     let content="",heading="";
-    if(currentGemShopTab==="classic"){
+    if(currentGemShopTab==="money"){
+        heading="BUY GEMS WITH USD";
+        const packs=CASH_GEM_PACKS.map(p=>'<div class="skin-box center" style="border-color:'+(p.featured?"#ffe45c":"#514260")+'"><h2>'+esc(p.name)+(p.featured?' ⭐':'')+'</h2><p style="font-size:27px;font-weight:900;color:#ffe45c">'+p.gems.toLocaleString()+' 💎</p><p style="font-size:24px;font-weight:900">'+p.price+' USD</p><p>One-time purchase. No subscription.</p><button class="gold" onclick="buyUsdGemPack(&quot;'+p.id+'&quot;)" '+(cashPurchasesEnabled?'':'disabled')+'>'+(cashPurchasesEnabled?'BUY WITH USD':'CHECKOUT NOT CONFIGURED')+'</button></div>').join("");
+        content='<div class="panel center"><h2>REAL MONEY GEM PACKS</h2><p>Payments use secure hosted Stripe Checkout. Candy Cards never stores your card number.</p><p><b>Paid gems are saved on the server for this browser profile.</b> Keep this browser data to retain access to the wallet.</p><p>Checkout: <b style="color:'+(cashPurchasesEnabled?'#38d76b':'#ff9a32')+'">'+(cashPurchasesEnabled?'READY':'NOT SET UP')+'</b></p></div><div class="shop-bundle-grid">'+packs+'</div>'+(cashPurchasesEnabled?'':'<div class="panel center"><b>Setup required before any real charge:</b><p>A parent/guardian must own and configure the payment account. Add STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, DATABASE_URL and APP_BASE_URL to Render environment settings. Never share secret keys in chat.</p></div>');
+    }else if(currentGemShopTab==="classic"){
         const cosmetics=GEM_COSMETICS.map(c=>{
             const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;
             const action=owned?'equipGemCosmetic(&quot;'+c.id+'&quot;)':'buyGemCosmetic(&quot;'+c.id+'&quot;)';
@@ -1587,7 +1661,7 @@ function shopPage(tab){
         if(currentGemShopTab==="victory")content+='<div class="panel center"><p>Equipped victory animation: <b>'+esc(save.equipped_victory_animation||"None")+'</b></p><button class="gray" onclick="equipGemVictoryAnimation(\'\')">REMOVE VICTORY ANIMATION</button></div>';
         if(currentGemShopTab==="eggs")content+='<div class="panel center"><p>The Mystery Egg Machine gives a permanent pet. Rare tiers are much less likely than Common pets.</p>'+(save.last_egg_pet?'<p>Last hatch: <b>'+esc(save.last_egg_pet)+'</b></p>':"")+'</div>';
     }
-    render(topbar()+'<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>'+save.candy_credits.toLocaleString()+'</b> • 💎 Candy Gems: <b>'+save.candy_gems.toLocaleString()+'</b></p><button class="purple" onclick="claimDailyGems()">'+(save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎")+'</button><p class="small-text">Permanent purchases stay unlocked in your saved game. Tokens and fusion materials remain in inventory until used.</p><p class="small-text">Earn 3 gems for each new normal wave and 10 for each new boss wave.</p></div><div class="gem-shop-tabs">'+tabs+'</div><h2>'+heading+'</h2>'+content+'<div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>');
+    render(topbar()+'<div class="section"><h1>💎 CANDY GEM SHOP</h1><div class="panel center"><h2>YOUR GEM WALLET</h2><p>🍬 Candy: <b>'+save.candy_credits.toLocaleString()+'</b> • 💎 Candy Gems: <b>'+save.candy_gems.toLocaleString()+'</b> • 💳 Paid Gems: <b>'+Number(paidGemWallet||0).toLocaleString()+'</b></p><button class="purple" onclick="claimDailyGems()">'+(save.last_gem_gift===new Date().toISOString().slice(0,10)?"DAILY GEMS CLAIMED":"DAILY GEM GIFT: +10 💎")+'</button><p class="small-text">Permanent purchases stay unlocked in your saved game. Tokens and fusion materials remain in inventory until used.</p><p class="small-text">Earn 3 gems for each new normal wave and 10 for each new boss wave.</p></div><div class="gem-shop-tabs">'+tabs+'</div><h2>'+heading+'</h2>'+content+'<div class="shop-continue"><button class="green" onclick="menu()">MAIN MENU</button><button class="blue" onclick="upgradePage()">UPGRADE SHOP</button></div></div>');
 }
 
 function openUpgradeShop(){if(waveState&&!waveState.finished)waveState.running=false;upgradePage();}
@@ -1598,8 +1672,8 @@ function upgradePage(){
 }
 
 function claimDailyGems(){const today=new Date().toISOString().slice(0,10);if(save.last_gem_gift===today)return toast("DAILY GEMS ALREADY CLAIMED!");save.last_gem_gift=today;save.candy_gems+=10;saveGame();sfxCollect();shopPage();toast("DAILY GIFT: +10 CANDY GEMS!");}
-function buyGemBundle(id){const b=GEM_BUNDLES.find(x=>x.id===id);if(!b)return;if(save.candy_gems<b.cost)return toast("NOT ENOUGH CANDY GEMS!");save.candy_gems-=b.cost;save.candy_credits+=b.candy;for(let i=0;i<b.packs;i++){const c1=randomCard(),c2=randomCard(),p=rollPet();save.cards_owned[c1[0]]=(save.cards_owned[c1[0]]||0)+1;save.cards_owned[c2[0]]=(save.cards_owned[c2[0]]||0)+1;save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}for(let i=0;i<b.pets;i++){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}saveGame();sfxWin();shopPage();toast(b.name+" PURCHASED!");}
-function buyGemCosmetic(id){const c=GEM_COSMETICS.find(x=>x.id===id);if(!c)return;if(save.owned_cosmetics.includes(id))return equipGemCosmetic(id);if(save.candy_gems<c.cost)return toast("NOT ENOUGH CANDY GEMS!");save.candy_gems-=c.cost;save.owned_cosmetics.push(id);save.equipped_cosmetic=id;saveGame();sfxCollect();shopPage();toast(c.name+" UNLOCKED!");}
+async function buyGemBundle(id){const b=GEM_BUNDLES.find(x=>x.id===id);if(!b)return;if(!await payGemShopCost(b.cost))return;save.candy_credits+=b.candy;for(let i=0;i<b.packs;i++){const c1=randomCard(),c2=randomCard(),p=rollPet();save.cards_owned[c1[0]]=(save.cards_owned[c1[0]]||0)+1;save.cards_owned[c2[0]]=(save.cards_owned[c2[0]]||0)+1;save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}for(let i=0;i<b.pets;i++){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}saveGame();sfxWin();shopPage();toast(b.name+" PURCHASED!");}
+async function buyGemCosmetic(id){const c=GEM_COSMETICS.find(x=>x.id===id);if(!c)return;if(save.owned_cosmetics.includes(id))return equipGemCosmetic(id);if(!await payGemShopCost(c.cost))return;save.owned_cosmetics.push(id);save.equipped_cosmetic=id;saveGame();sfxCollect();shopPage();toast(c.name+" UNLOCKED!");}
 function equipGemCosmetic(id){if(id!=="none"&&!save.owned_cosmetics.includes(id))return toast("COSMETIC NOT OWNED!");save.equipped_cosmetic=id==="none"?"None":id;saveGame();shopPage();toast(id==="none"?"AURA REMOVED!":"COSMETIC EQUIPPED!");}
 function buyHealth(){if(save.candy_credits<10)return toast("NOT ENOUGH CANDY!");save.candy_credits-=10;save.player_max_health+=20;save.player_health+=20;save.health_level++;sfxCollect();saveGame();toast("HEALTH +20!");upgradePage();}
 function buyDamage(){if(save.candy_credits<15)return toast("NOT ENOUGH CANDY!");save.candy_credits-=15;save.player_damage+=5;save.damage_level++;sfxCollect();saveGame();toast("DAMAGE +5!");upgradePage();}
@@ -2871,6 +2945,8 @@ menu=function(){
 // START
 // ================================================================
 menu();
+refreshPaidGemWallet();
+initializeUsdGemPurchases();
 </script>
 </body>
 </html>
