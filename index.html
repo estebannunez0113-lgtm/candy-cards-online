@@ -2280,11 +2280,11 @@ function redeemSecretCode(){
     }else if(code==="admin"){
         // Unlock all collection content and all replayable waves/skins.
         for(const c of CANDY_CARDS)save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
-        for(const p of PETS)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));
+        for(const p of PETS){if(!p.gemShopOnly&&!p.fusionOnly)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));}
         save.highest_wave_cleared=MAX_WAVES;
         save.candy_credits+=10000;
         save.candy_gems=(Number(save.candy_gems)||0)+6000;
-        result="ADMIN CODE REDEEMED! ALL CARDS, PETS AND WAVES UNLOCKED. +10,000 CANDY CREDITS AND +6,000 CANDY GEMS.";
+        result="ADMIN CODE REDEEMED! STANDARD CARDS, PETS AND WAVES UNLOCKED. ECHO CHIPY STILL COMES FROM THE GEM SHOP; CHIPY SUPER MEGA STILL REQUIRES FUSION. +10,000 CANDY CREDITS AND +6,000 CANDY GEMS.";
     }else if(code==="galaxy"){
         save.candy_gems=(Number(save.candy_gems)||0)+250;
         save.candy_credits+=1500;
