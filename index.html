@@ -1185,9 +1185,11 @@ function drawCardArt(ctx,name,w,h){
 // ================================================================
 function petsPage(){
     currentMode="pets";
-    render(`${topbar()}<div class="section"><h1>PET COLLECTION</h1><div class="panel center">Equipped: <b>${esc(save.equipped_pet||"None")}</b> • Collected ${countPets()}/${PETS.length}<div class="skill-row" style="margin-top:12px"><button class="purple" onclick="fusionLabPage()">FUSION LAB</button><button class="gold" onclick="shopPage()">CANDY GEM SHOP</button></div></div><div class="scroll"><div class="grid5">${PETS.map(p=>{
-        const o=Number(save.pets_owned[p.name]||0);
-        return `<div class="pet-card" style="border-color:${RARITY_COLORS[p.rarity]};opacity:${o?1:.55}"><canvas class="pet-canvas" width="180" height="105" data-pet="${esc(p.name)}"></canvas><div class="card-name">${o?esc(p.name):"LOCKED"}</div><div class="card-rarity" style="color:${RARITY_COLORS[p.rarity]}">${p.rarity}</div><div class="card-amount">x${o}</div><div class="small-text">Damage ${p.damage} • Speed ${p.speed} • Range ${p.range} • Candy +${p.credits}</div>${p.name==="Chipy"?`<div style="font-size:10px;font-weight:900;color:#ff4dff">DROP CHANCE: 1 IN 10 QUADRILLION</div>`:""}${p.name==="Echo Chipy"?`<div style="font-size:10px;font-weight:900;color:#8deaff">GEM SHOP ONLY • NEVER IN PACKS/WAVES</div>`:""}${p.name==="Chipy Super Mega"?`<div style="font-size:10px;font-weight:900;color:#ffe45c">FUSION ONLY • NEVER IN PACKS/WAVES</div>`:""}${o?`<button class="small pet-use-btn" onclick="equipPet('${encodeURIComponent(p.name)}')">${save.equipped_pet===p.name?"USED":"USE"}</button>`:""}</div>`;
+    const equipped=getEquippedPetNames();
+    const slots=1+Math.max(0,Number(save.extra_pet_slots)||0);
+    render(`${topbar()}<div class="section"><h1>PET COLLECTION</h1><div class="panel center">Equipped pets: <b>${esc(equipped.join(", ")||"None")}</b><br>Pet slots: <b>${equipped.length}/${slots}</b> • Collected ${countPets()}/${PETS.length}<div class="skill-row" style="margin-top:12px"><button class="purple" onclick="fusionLabPage()">FUSION LAB</button><button class="gold" onclick="shopPage('pets')">CANDY GEM SHOP</button></div></div><div class="scroll"><div class="grid5">${PETS.map(p=>{
+        const o=Number(save.pets_owned[p.name]||0),active=equipped.includes(p.name),full=equipped.length>=slots;
+        return `<div class="pet-card" style="border-color:${RARITY_COLORS[p.rarity]};opacity:${o?1:.55}"><canvas class="pet-canvas" width="180" height="105" data-pet="${esc(p.name)}"></canvas><div class="card-name">${o?esc(p.name):"LOCKED"}</div><div class="card-rarity" style="color:${RARITY_COLORS[p.rarity]}">${p.rarity}</div><div class="card-amount">x${o}</div><div class="small-text">Damage ${p.damage} • Speed ${p.speed} • Range ${p.range} • Candy +${p.credits}</div>${p.name==="Chipy"?`<div style="font-size:10px;font-weight:900;color:#ff4dff">DROP CHANCE: 1 IN 10 QUADRILLION</div>`:""}${p.name==="Echo Chipy"?`<div style="font-size:10px;font-weight:900;color:#8deaff">GEM SHOP ONLY • NEVER IN PACKS/WAVES</div>`:""}${p.name==="Chipy Super Mega"?`<div style="font-size:10px;font-weight:900;color:#ffe45c">FUSION ONLY • NEVER IN PACKS/WAVES</div>`:""}${p.gemShopOnly?`<div style="font-size:10px;font-weight:900;color:#bba5ff">GEM SHOP EXCLUSIVE</div>`:""}${o?`<button class="small pet-use-btn" onclick="equipPet('${encodeURIComponent(p.name)}')" ${!active&&full?"disabled":""}>${active?"UNEQUIP":full?"SLOTS FULL":"EQUIP"}</button>`:""}</div>`;
     }).join("")}</div></div></div>`);
     paintPetCanvases();
 }
@@ -1204,12 +1206,15 @@ function fusionLabPage(){
         const rarity=outputPet?outputPet.rarity:(outputCard?outputCard[1]:"Secret");
         const ingredientsHtml=recipe.ingredients.map((name,i)=>`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #ffffff16"><span>${esc(name)}</span><b style="color:${amounts[i]>0?"#7dffad":"#ff8b8b"}">x${amounts[i]}</b></div>`).join("");
         const stats=outputPet?`<div class="small-text">Damage ${outputPet.damage} • Speed ${outputPet.speed} • Range ${outputPet.range} • Candy +${outputPet.credits}</div>`:`<div class="small-text">Card rarity: ${esc(rarity)}</div>`;
+        const mc=FUSION_MATERIAL_COSTS[recipe.result]||{};
+        const materialHtml=Object.keys(mc).length?`<div class="small-text" style="color:#ffe18a">Materials required: ${Object.entries(mc).map(([k,v])=>esc(fusionMaterialLabel(k))+" x"+v+" (you have "+Number(save.fusion_materials[k]||0)+")").join(" • ")}</div>`:"";
         return `<div class="panel" style="border:1px solid ${RARITY_COLORS[rarity]||"#a58cff"};min-width:0;display:flex;flex-direction:column;gap:9px">
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:12px;color:#aeb8d2">${recipe.type==="pet"?"PET FUSION":"CARD FUSION"} #${index+1}</b><b style="font-size:11px;color:${RARITY_COLORS[rarity]||"#a58cff"}">${esc(rarity)}</b></div>
           <div style="font-size:15px;font-weight:900;line-height:1.25">${ingredientsHtml}</div>
           <div style="text-align:center;color:#ffd861;font-size:20px;font-weight:1000">↓ FUSE ↓</div>
           <div style="text-align:center;font-weight:1000;font-size:16px">${esc(recipe.result)}</div>
           ${stats}
+          ${materialHtml}
           <button class="${recipe.type==="pet"?"purple":"gold"}" onclick="fuseRecipe(${index})" ${ready?"":"disabled"}>${ready?"FUSE NOW":"NEED INGREDIENTS"}</button>
         </div>`;
     };
@@ -1217,12 +1222,38 @@ function fusionLabPage(){
     const cardRecipes=cardFusions.map(r=>recipeCard(r,FUSION_RECIPES.indexOf(r))).join("");
     render(`${topbar()}<div class="section"><h1>FUSION LAB</h1>
       <div class="panel center"><h2>40 NEW FUSIONS!</h2><p>20 pet fusions + 20 card fusions, plus the original Chipy Super Mega fusion.</p><p>Fusions consume one copy of each ingredient and permanently unlock the result. Fused results never drop from packs or waves.</p>
-      <div class="skill-row"><button class="purple" onclick="petsPage()">PET COLLECTION</button><button class="gold" onclick="cardsPage()">CARD COLLECTION</button><button class="blue" onclick="shopPage()">CANDY GEM SHOP</button></div></div>
+      <div class="skill-row"><button class="purple" onclick="petsPage()">PET COLLECTION</button><button class="gold" onclick="cardsPage()">CARD COLLECTION</button><button class="blue" onclick="shopPage('materials')">FUSION MATERIALS</button><button class="orange" onclick="useFusionResetToken()" ${save.fusion_reset_tokens>0&&save.last_fusion?"":"disabled"}>RESET LAST FUSION (${save.fusion_reset_tokens})</button></div></div>
       <h2 style="margin:18px 0 10px">PET FUSIONS (21)</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px">${petRecipes}</div>
       <h2 style="margin:22px 0 10px">CARD FUSIONS (20)</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px">${cardRecipes}</div>
     </div>`);
     paintPetCanvases();
 }
+const FUSION_MATERIAL_COSTS = {
+    "Rainbow Void Deity":{cosmic_core:3,rainbow_catalyst:2,ultimate_fusion_crystal:1},
+    "Origin Candy Godling":{cosmic_core:2,rainbow_catalyst:1,ultimate_fusion_crystal:1},
+    "Original Food God":{cosmic_core:2,rainbow_catalyst:2},
+    "Black Hole Supernova Owl":{cosmic_core:1,rainbow_catalyst:1}
+};
+function fusionMaterialLabel(key){return ({cosmic_core:"Cosmic Core",rainbow_catalyst:"Rainbow Catalyst",ultimate_fusion_crystal:"Ultimate Fusion Crystal"})[key]||key;}
+function useFusionResetToken(){
+    if(save.fusion_reset_tokens<1)return toast("YOU NEED A FUSION RESET TOKEN!");
+    const f=save.last_fusion;
+    if(!f)return toast("FUSE SOMETHING FIRST — THEN YOU CAN RESET THAT FUSION.");
+    const inv=f.type==="pet"?save.pets_owned:save.cards_owned;
+    if(Number(inv[f.result]||0)<1)return toast("YOU NO LONGER HAVE THE FUSED RESULT TO RESET.");
+    inv[f.result]--;
+    for(const n of f.ingredients||[])inv[n]=Number(inv[n]||0)+1;
+    for(const [key,amount] of Object.entries(f.materialsUsed||{}))save.fusion_materials[key]=Number(save.fusion_materials[key]||0)+Number(amount||0);
+    if(f.type==="pet"&&save.equipped_pet===f.result){
+        save.equipped_pets=(save.equipped_pets||[]).filter(n=>n!==f.result);
+        save.equipped_pet=save.equipped_pets[0]||f.ingredients[0]||null;
+        if(save.equipped_pet&&!save.equipped_pets.includes(save.equipped_pet))save.equipped_pets.unshift(save.equipped_pet);
+    }
+    if(f.type==="card"&&save.equipped_card===f.result)save.equipped_card=f.ingredients[0]||null;
+    save.fusion_reset_tokens--;save.last_fusion=null;
+    saveGame();sfxCollect();fusionLabPage();toast("LAST FUSION REVERSED! INGREDIENTS RETURNED.");
+}
+
 function fuseRecipe(index){
     const recipe=FUSION_RECIPES[index];
     if(!recipe){toast("FUSION RECIPE NOT FOUND!");return;}
@@ -1231,21 +1262,19 @@ function fuseRecipe(index){
     const needs={};
     for(const ingredient of recipe.ingredients)needs[ingredient]=(needs[ingredient]||0)+1;
     for(const [name,amount] of Object.entries(needs)){
-        if(Number(inventory[name]||0)<amount){
-            sfxError();
-            toast("YOU NEED MORE "+name.toUpperCase()+"!");
-            fusionLabPage();
-            return;
-        }
+        if(Number(inventory[name]||0)<amount){sfxError();toast("YOU NEED MORE "+name.toUpperCase()+"!");fusionLabPage();return;}
+    }
+    const materials=FUSION_MATERIAL_COSTS[recipe.result]||{};
+    for(const [key,amount] of Object.entries(materials)){
+        if(Number(save.fusion_materials[key]||0)<amount){sfxError();toast("YOU NEED "+amount+" "+fusionMaterialLabel(key).toUpperCase()+"!");fusionLabPage();return;}
     }
     for(const [name,amount] of Object.entries(needs))inventory[name]=Number(inventory[name]||0)-amount;
+    for(const [key,amount] of Object.entries(materials))save.fusion_materials[key]=Number(save.fusion_materials[key]||0)-amount;
     inventory[recipe.result]=Number(inventory[recipe.result]||0)+1;
-    if(isPet)save.equipped_pet=recipe.result;
+    save.last_fusion={type:recipe.type,ingredients:recipe.ingredients.slice(),result:recipe.result,materialsUsed:Object.assign({},materials)};
+    if(isPet){save.equipped_pet=recipe.result;save.equipped_pets=[recipe.result,...getEquippedPetNames().filter(n=>n!==recipe.result)].slice(0,1+save.extra_pet_slots);}
     else save.equipped_card=recipe.result;
-    saveGame();
-    sfxWin();
-    fusionLabPage();
-    toast("FUSION SUCCESS! "+recipe.result.toUpperCase()+" UNLOCKED!");
+    saveGame();sfxWin();fusionLabPage();toast("FUSION SUCCESS! "+recipe.result.toUpperCase()+" UNLOCKED!");
 }
 function fuseChipySuperMega(){return fuseRecipe(0);}
 function buyEchoChipy(){
@@ -1265,16 +1294,17 @@ function buyEchoChipy(){
 
 function equipPet(encoded){
     const name=decodeURIComponent(String(encoded));
-    const owned=Number(save.pets_owned[name]||0);
-    if(owned<=0){
-        toast("YOU DO NOT OWN THAT PET!");
-        sfxError();
-        return;
-    }
-    save.equipped_pet=name;
-    saveGame();
-    sfxClick();
-    toast(name+" EQUIPPED!");
+    if(Number(save.pets_owned[name]||0)<=0){toast("YOU DO NOT OWN THAT PET!");sfxError();return;}
+    let equipped=getEquippedPetNames();
+    const slots=1+Math.max(0,Number(save.extra_pet_slots)||0);
+    if(equipped.includes(name))equipped=equipped.filter(n=>n!==name);
+    else if(equipped.length>=slots){
+        if(slots===1)equipped=[name];
+        else {toast("PET SLOTS FULL! UNEQUIP A PET FIRST.");sfxError();return;}
+    }else equipped.push(name);
+    save.equipped_pets=equipped;
+    save.equipped_pet=equipped[0]||null;
+    saveGame();sfxClick();toast(equipped.includes(name)?name+" EQUIPPED!":"PET UNEQUIPPED!");
     petsPage();
 }
 
