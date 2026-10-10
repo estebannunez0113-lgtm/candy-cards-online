@@ -1570,7 +1570,7 @@ function drawPetArt(ctx,x,y,p,scale=1){
         circ(0,-9,18,W);eye(-10,-21,"#8deaff",6);eye(10,-21,"#c17dff",6);
         circ(0,-9,3,"#111");ctx.strokeStyle="#10121e";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-5,7,.15,2.95);ctx.stroke();
         line(-18,-8,-38,-13,"#d9faff",2);line(-18,-3,-40,2,"#d9faff",2);line(18,-8,38,-13,"#d9faff",2);line(18,-3,40,2,"#d9faff",2);
-        ctx.restore();return;
+        ctx.restore();ctx.restore();return;
     }
     if(n==="Chipy Super Mega"){
         ctx.save();
@@ -1584,7 +1584,7 @@ function drawPetArt(ctx,x,y,p,scale=1){
         circ(0,-9,21,W);eye(-12,-22,"#ffe45c",7);eye(12,-22,"#ffe45c",7);
         circ(0,-9,4,"#111");ctx.strokeStyle="#111";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-5,8,.15,2.95);ctx.stroke();
         line(-18,-8,-42,-14,"#fff",2);line(-18,-3,-44,3,"#fff",2);line(18,-8,42,-14,"#fff",2);line(18,-3,44,3,"#fff",2);
-        ctx.restore();return;
+        ctx.restore();ctx.restore();return;
     }
     if(n==="Chipy"){
         ell(0,7,34,24,"#35353d");
