@@ -1817,10 +1817,13 @@ function finishCardBattle(won){cardBattle.over=true;if(won){save.wins++;save.tro
 // ================================================================
 // MULTIPLAYER — SEPARATE PAGE AND CONNECTION
 // ================================================================
-function multiplayerPage(){
+function multiplayerPage(mode='battle'){
     if(!navigator.onLine){alert("Oh dear, sweets! No Wi-Fi! Reconnect to the Wi-Fi to play online.");return;}
-    currentMode="multiplayer";
-    render(`${topbar()}<div class="section"><h1>MULTIPLAYER</h1><div class="panel center"><h2>ONLINE MULTIPLAYER</h2><p>Create a room, join a friend, or find a player. Online survival waves/infinite co-op needs matching server support; this lobby currently uses the existing online card battle.</p><div class="form"><input id="multiName" maxlength="18" value="${esc(save.username)}" placeholder="PLAYER NAME"><input id="roomInput" maxlength="12" placeholder="ROOM CODE"></div><br><div class="skill-row"><button class="green" onclick="createMultiplayerRoom()">CREATE ROOM</button><button class="blue" onclick="joinMultiplayerRoom()">JOIN ROOM</button><button class="gray" onclick="findMultiplayerMatch()">FIND PLAYER</button></div><div id="netState" class="notice">SERVER NOT CONNECTED</div></div><div class="multi-grid"><div class="panel"><h2>YOUR MULTIPLAYER CARD</h2><p>${esc(save.equipped_card||"NONE")}</p><p>Pet: ${esc(save.equipped_pet||"NONE")}</p></div><div class="panel"><h2>ROOM</h2><p id="roomLabel">${multiRoom||"NONE"}</p><p>Share the room code with the other player.</p></div></div></div>`);
+    multiMode=mode==='waves'?'waves':'battle';
+    currentMode=multiMode==='waves'?'multiplayerWavesLobby':'multiplayer';
+    const title=multiMode==='waves'?'WAVES MULTIPLAYER':'BATTLING MULTIPLAYER';
+    const desc=multiMode==='waves'?'Two players team up against shared, server-synced enemy waves.':'Two players battle with their equipped cards.';
+    render(`${topbar()}<div class="section"><h1>${title}</h1><div class="panel center"><h2>ONLINE MULTIPLAYER</h2><p>${desc}</p><div class="form"><input id="multiName" maxlength="18" value="${esc(save.username)}" placeholder="PLAYER NAME"><input id="roomInput" maxlength="12" placeholder="ROOM CODE"></div><br><div class="skill-row"><button class="green" onclick="createMultiplayerRoom()">CREATE ROOM</button><button class="blue" onclick="joinMultiplayerRoom()">JOIN ROOM</button><button class="gray" onclick="findMultiplayerMatch()">FIND PLAYER</button></div><div id="netState" class="notice">SERVER NOT CONNECTED</div><p style="font-size:13px">Both players must choose the same mode. Share the room code.</p></div><div class="multi-grid"><div class="panel"><h2>YOUR CARD</h2><p>${esc(save.equipped_card||"NONE")}</p><p>Pet: ${esc(save.equipped_pet||"NONE")}</p></div><div class="panel"><h2>ROOM</h2><p id="roomLabel">${multiRoom||"NONE"}</p><p>Two players per room.</p></div></div></div>`);
 }
 function setNet(text){const x=document.getElementById("netState");if(x)x.textContent=text;}
 function requireMultiplayerInternet(){if(!navigator.onLine){alert("Oh dear, sweets! No Wi-Fi! Reconnect to the Wi-Fi to play online.");setNet("OFFLINE — RECONNECT TO WI-FI TO PLAY ONLINE");return false;}return true;}
@@ -1830,9 +1833,10 @@ function socketUrl(){const proto=location.protocol==="https:"?"wss":"ws";return 
 function connectSocket(){if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;try{socket=new WebSocket(socketUrl());socket.onopen=()=>setNet("CONNECTED TO SERVER");socket.onclose=()=>setNet("SERVER DISCONNECTED");socket.onerror=()=>setNet("SERVER CONNECTION ERROR");socket.onmessage=e=>handleMultiMessage(e.data);}catch{setNet("WEBSOCKET NOT AVAILABLE");}}
 function sendMulti(obj){if(!socket||socket.readyState!==WebSocket.OPEN){setNet("NO SERVER CONNECTION");return false;}socket.send(JSON.stringify(obj));return true;}
 function multiPlayerData(){return{username:save.username,card:save.equipped_card,pet:save.equipped_pet,trophies:save.trophies};}
-function createMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"create_room",username:save.username,player:multiPlayerData()}),250);}
-function joinMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";const code=document.getElementById("roomInput")?.value.trim().toUpperCase();if(!code)return toast("ENTER A ROOM CODE!");saveGame();connectSocket();setTimeout(()=>sendMulti({type:"join_room",room:code,roomCode:code,username:save.username,player:multiPlayerData()}),250);}
-function findMultiplayerMatch(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"matchmake",username:save.username,player:multiPlayerData()}),250);}
+let multiMode='battle';
+function createMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"create_room",mode:multiMode,username:save.username,player:multiPlayerData()}),250);}
+function joinMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";const code=document.getElementById("roomInput")?.value.trim().toUpperCase();if(!code)return toast("ENTER A ROOM CODE!");saveGame();connectSocket();setTimeout(()=>sendMulti({type:"join_room",mode:multiMode,room:code,roomCode:code,username:save.username,player:multiPlayerData()}),250);}
+function findMultiplayerMatch(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"matchmake",mode:multiMode,username:save.username,player:multiPlayerData()}),250);}
 function handleMultiMessage(raw){let m;try{m=JSON.parse(raw)}catch{setNet(raw);return;}
     if(m.type==="connected"){setNet(m.message||"CONNECTED TO SERVER");return;}
     if(m.type==="room_created"){multiRoom=m.room||m.roomCode||m.code||"";setNet("ROOM CREATED: "+multiRoom);const i=document.getElementById("roomInput");if(i)i.value=multiRoom;return;}
@@ -1842,6 +1846,9 @@ function handleMultiMessage(raw){let m;try{m=JSON.parse(raw)}catch{setNet(raw);r
     if(m.type==="match_found"){multiRoom=m.room||multiRoom;setNet("PLAYER FOUND — STARTING BATTLE...");return;}
     if(m.type==="multiplayer_battle_start"){beginOnlineBattle(m);return;}
     if(m.type==="multiplayer_battle_state"){updateOnlineBattle(m);return;}
+    if(m.type==="multiplayer_waves_start"){beginOnlineWaves(m);return;}
+    if(m.type==="multiplayer_waves_state"){updateOnlineWaves(m);return;}
+    if(m.type==="multiplayer_waves_result"){alert(m.message||"TEAM DEFEATED!");onlineWaves=null;multiplayerPage('waves');return;}
     if(m.type==="battle_result"){finishOnlineBattle(m);return;}
     if(m.type==="opponent_left"){setNet("OPPONENT LEFT");alert(m.message||"Opponent disconnected.");multiplayerPage();return;}
     if(m.type==="error")return setNet("SERVER ERROR: "+(m.message||"UNKNOWN"));
@@ -1921,6 +1928,18 @@ function finishOnlineBattle(msg){
 }
 function leaveOnlineBattle(){sendMulti({type:"leave_room"});onlineBattle=null;multiplayerPage();}
 
+
+let onlineWaves=null;
+function beginOnlineWaves(m){onlineWaves={you:m.you,state:m.state,log:['TEAM UP! CO-OP WAVES STARTED!']};drawOnlineWaves();}
+function updateOnlineWaves(m){if(!onlineWaves)return;onlineWaves.state=m.state||onlineWaves.state;if(m.log)onlineWaves.log.push(m.log);drawOnlineWaves();}
+function drawOnlineWaves(){
+ if(!onlineWaves)return;currentMode='multiplayerWaves';
+ const s=onlineWaves.state,me=s.players.find(p=>p.id===onlineWaves.you),ally=s.players.find(p=>p.id!==onlineWaves.you),e=s.enemy;
+ render(`${topbar()}<div class="section"><h1>WAVES MULTIPLAYER</h1><div class="panel center"><h2>WAVE ${s.wave} ${e.boss?'— BOSS':''}</h2><h2 style="color:#ffe45c">${esc(e.name)}</h2><div class="hpbox" style="width:min(620px,95%);height:25px"><div style="width:${Math.max(0,e.hp/e.maxHp*100)}%;background:#ff4757"></div></div><b>ENEMY HP: ${e.hp} / ${e.maxHp}</b></div><div class="multi-grid"><div class="panel center"><h2>YOU: ${esc(me.username)}</h2><p>Card: ${esc(me.card||'Red Lollipop')}</p><div class="hpbox"><div style="width:${Math.max(0,me.hp/me.maxHp*100)}%"></div></div><b>HP ${me.hp} / ${me.maxHp}</b></div><div class="panel center"><h2>TEAMMATE: ${esc(ally.username)}</h2><p>Card: ${esc(ally.card||'Red Lollipop')}</p><div class="hpbox"><div style="width:${Math.max(0,ally.hp/ally.maxHp*100)}%"></div></div><b>HP ${ally.hp} / ${ally.maxHp}</b></div></div><div class="battle-actions"><button class="red" onclick="sendOnlineWaveAction('strike')">ATTACK</button><button class="gold" onclick="sendOnlineWaveAction('power')">POWER ATTACK</button><button class="blue" onclick="sendOnlineWaveAction('pet')">PET SKILL</button><button class="green" onclick="sendOnlineWaveAction('heal')">TEAM HEAL</button><button class="gray" onclick="leaveOnlineWaves()">LEAVE</button></div><div class="log"><div>ROOM: ${esc(s.room)}</div>${onlineWaves.log.slice(-6).map(x=>`<div>${esc(x)}</div>`).join('')}</div></div>`);
+}
+function sendOnlineWaveAction(action){if(!onlineWaves||!socket)return;if(!sendMulti({type:'wave_action',room:onlineWaves.state.room,action}))toast('NOT CONNECTED!');}
+function leaveOnlineWaves(){sendMulti({type:'leave_room'});onlineWaves=null;multiplayerPage('waves');}
+
 // ================================================================
 // RANK — SEPARATE FROM MULTIPLAYER UI
 // ================================================================
@@ -1938,7 +1957,8 @@ function gameModesPage(){
     modal.innerHTML=`<div class="modal-box"><h1>CHOOSE GAME MODE</h1><p>Pick how you want to survive.</p><div class="skill-row">
     <button class="green" onclick="this.closest('.modal').remove();startWaves()">WAVES</button>
     <button class="purple" onclick="this.closest('.modal').remove();startInfinite()">INFINITE SURVIVAL</button>
-    <button class="blue" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button>
+    <button class="blue" onclick="this.closest('.modal').remove();multiplayerPage('waves')">WAVES MULTIPLAYER</button>
+    <button class="red" onclick="this.closest('.modal').remove();multiplayerPage('battle')">BATTLING MULTIPLAYER</button>
     </div><p style="font-size:13px;color:#d8caff">Infinite: two enemies spawn every 3 seconds. Every 10 kills increases the danger level.</p><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
     document.body.appendChild(modal);
 }
@@ -1946,7 +1966,7 @@ function gameModesPage(){
 function mainMenuExtras(){
     const modal=document.createElement("div");
     modal.className="modal";
-    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();gameModesPage()">WAVES / INFINITE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage()">MULTIPLAYER</button><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
+    modal.innerHTML=`<div class="modal-box"><h1>NEW CANDY CARDS MODES</h1><p>These are separate from the original PLAY mode.</p><div class="skill-row"><button class="blue" onclick="this.closest('.modal').remove();gameModesPage()">WAVES / INFINITE</button><button class="green" onclick="this.closest('.modal').remove();multiplayerPage('waves')">WAVES MULTIPLAYER</button><button class="red" onclick="this.closest('.modal').remove();multiplayerPage('battle')">BATTLING MULTIPLAYER</button><button class="blue" onclick="this.closest('.modal').remove();battlePage()">CARD BATTLE</button><button class="gold" onclick="this.closest('.modal').remove();rankPage()">RANK</button><button class="purple" onclick="openSecretCode()">SECRET CODE</button><button class="gold" onclick="this.closest('.modal').remove();shopPage()">CANDY GEM SHOP</button><button class="red" onclick="confirmResetProgress()">RESET PROGRESS</button></div><p style="font-size:12px;color:#bbb">RESET PROGRESS clears this browser's saved game data. Secret codes remain available.</p><br><button class="gray" onclick="this.closest('.modal').remove()">CLOSE</button></div>`;
     document.body.appendChild(modal);
 }
 
