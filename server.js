@@ -70,13 +70,11 @@ function findRoomFor(ws) {
     return null;
 }
 
-function makeRoom(code, first, second = null) {
+function makeRoom(code, first, second = null, mode = 'battle') {
     const room = {
-        code,
-        players: [],
-        started: false,
-        turn: 0,
-        round: 0
+        code, mode: mode === 'waves' ? 'waves' : 'battle',
+        players: [], started: false, turn: 0, round: 0,
+        wave: 1, enemy: null
     };
 
     for (const item of [first, second].filter(Boolean)) {
@@ -108,7 +106,7 @@ function roomSnapshot(room) {
 }
 
 function startRoomBattle(room) {
-    if (!room || room.started) return;
+    if (!room || room.started || room.mode !== 'battle') return;
 
     const uniqueConnections = new Set(room.players.map(p => p.ws));
     const uniqueIds = new Set(room.players.map(p => p.id));
@@ -185,6 +183,50 @@ function cardDamage(action) {
     return 20;
 }
 
+function waveEnemy(wave) {
+    const bosses={5:'Broccoli King',10:'Steak Titan',15:'Candy Crusher',20:'Toxic Broccoli',25:'Golden Steak',30:'Fire Candy',35:'Galaxy Beast',40:'Shadow Food',45:'Diamond Destroyer',50:'The Candy Apocalypse'};
+    const normal=['Broccoli','Carrot Goblin','Angry Tomato','Cheese Beast','Cookie Monster'];
+    const boss=Boolean(bosses[wave]), hp=(boss?180:65)+wave*(boss?28:18);
+    return {name:bosses[wave]||normal[(wave-1)%normal.length],boss,hp,maxHp:hp};
+}
+function waveSnapshot(room){return {room:room.code,wave:room.wave,enemy:room.enemy,players:room.players.map(p=>({id:p.id,username:p.data.username,card:p.data.card,pet:p.data.pet,hp:p.hp,maxHp:p.maxHp}))};}
+function broadcastWave(room,log=''){const state=waveSnapshot(room);for(const p of room.players)send(p.ws,{type:'multiplayer_waves_state',you:p.id,state,log});}
+function startCoopWaves(room){
+    if(!room||room.started||room.mode!=='waves'||room.players.length!==2)return;
+    if(new Set(room.players.map(p=>p.ws)).size!==2||new Set(room.players.map(p=>p.id)).size!==2)return;
+    room.started=true;room.wave=1;room.enemy=waveEnemy(1);
+    for(const p of room.players){p.hp=100;p.maxHp=100;}
+    const state=waveSnapshot(room);
+    for(const p of room.players)send(p.ws,{type:'multiplayer_waves_start',you:p.id,state});
+    console.log(`Co-op waves started in room ${room.code}: ${room.players.map(p=>p.data.username).join(' + ')}`);
+}
+function handleWaveAction(ws,msg){
+    const room=findRoomFor(ws);
+    if(!room||!room.started||room.mode!=='waves'||room.players.length!==2){send(ws,{type:'error',message:'No active co-op waves game.'});return;}
+    const me=room.players.find(p=>p.ws===ws);
+    if(!me){send(ws,{type:'error',message:'You are not in this room.'});return;}
+    if(me.hp<=0){send(ws,{type:'error',message:'You are knocked out. Your teammate must keep fighting.'});return;}
+    const action=['strike','power','pet','heal'].includes(msg.action)?msg.action:'strike';
+    const damage=action==='power'?36:action==='pet'?27:20;let log='';
+    if(action==='heal'){
+        const ally=room.players.find(p=>p.id!==me.id);
+        me.hp=Math.min(me.maxHp,me.hp+18);if(ally)ally.hp=Math.min(ally.maxHp,ally.hp+10);
+        log=`${me.data.username} used a team heal!`;
+    }else{
+        room.enemy.hp=Math.max(0,room.enemy.hp-damage);
+        log=`${me.data.username} hit ${room.enemy.name} for ${damage} damage.`;
+        if(room.enemy.hp<=0){const cleared=room.wave++;room.enemy=waveEnemy(room.wave);for(const p of room.players)p.hp=Math.min(p.maxHp,p.hp+12);log+=` Wave ${cleared} cleared! Wave ${room.wave} begins!`;}
+        const enemyDamage=Math.min(18,4+Math.floor(room.wave/3)+(room.enemy.boss?3:0));
+        for(const p of room.players)if(p.hp>0)p.hp=Math.max(0,p.hp-enemyDamage);
+    }
+    broadcastWave(room,log);
+    if(room.players.every(p=>p.hp<=0)){
+        for(const p of room.players)send(p.ws,{type:'multiplayer_waves_result',wave:room.wave,message:`TEAM DEFEATED! YOU REACHED WAVE ${room.wave}.`});
+        for(const p of room.players)players.delete(p.ws);rooms.delete(room.code);
+    }
+}
+
+
 function handleBattleAction(ws, msg) {
     const room = findRoomFor(ws);
     if (!room || !room.started || room.players.length !== MAX_PLAYERS_PER_ROOM) {
@@ -249,6 +291,8 @@ function handleMessage(ws, raw) {
 
     const type = msg.type;
 
+    if (type === 'wave_action') { handleWaveAction(ws, msg); return; }
+
     if (type === 'create_room') {
         const existingRoom = findRoomFor(ws);
         if (existingRoom) {
@@ -261,8 +305,9 @@ function handleMessage(ws, raw) {
         const id = getPlayerId(ws);
         players.set(ws, { id, ws, data });
         const code = makeCode();
-        makeRoom(code, { id, ws, data });
-        send(ws, { type: 'room_created', room: code });
+        const mode = msg.mode === 'waves' ? 'waves' : 'battle';
+        makeRoom(code, { id, ws, data }, null, mode);
+        send(ws, { type: 'room_created', room: code, mode });
         console.log(`Room ${code} created by ${data.username}.`);
         return;
     }
@@ -272,6 +317,11 @@ function handleMessage(ws, raw) {
         const room = rooms.get(code);
         if (!room) {
             send(ws, { type: 'error', message: 'Room not found. Check the room code.' });
+            return;
+        }
+        const requestedMode = msg.mode === 'waves' ? 'waves' : 'battle';
+        if (room.mode !== requestedMode) {
+            send(ws, { type: 'error', message: room.mode === 'waves' ? 'This is a Waves Multiplayer room.' : 'This is a Battling Multiplayer room.' });
             return;
         }
 
@@ -308,7 +358,8 @@ function handleMessage(ws, raw) {
         const host = room.players.find(player => player.ws !== ws);
         if (host) send(host.ws, { type: 'opponent_joined', room: code, opponent: data });
         console.log(`${data.username} joined room ${code}. Players: ${room.players.length}/${MAX_PLAYERS_PER_ROOM}`);
-        startRoomBattle(room);
+        if (room.mode === 'waves') startCoopWaves(room);
+        else startRoomBattle(room);
         return;
     }
 
@@ -323,33 +374,37 @@ function handleMessage(ws, raw) {
         const id = getPlayerId(ws);
         players.set(ws, { id, ws, data });
 
+        const mode = msg.mode === 'waves' ? 'waves' : 'battle';
         let other = null;
-        while (matchmaking.length > 0) {
+        const waitingCount = matchmaking.length;
+        for (let i = 0; i < waitingCount; i++) {
             const candidate = matchmaking.shift();
-            if (candidate.ws !== ws &&
+            if (candidate.ws !== ws && candidate.mode === mode &&
                 candidate.ws.readyState === WebSocket.OPEN &&
-                !findRoomFor(candidate.ws) &&
-                players.has(candidate.ws)) {
-                other = candidate;
-                break;
+                !findRoomFor(candidate.ws) && players.has(candidate.ws)) {
+                other = candidate; break;
             }
+            if (candidate.ws.readyState === WebSocket.OPEN &&
+                !findRoomFor(candidate.ws) && players.has(candidate.ws)) matchmaking.push(candidate);
         }
 
         if (!other) {
-            matchmaking.push({ ws, id, data });
-            send(ws, { type: 'matchmaking', message: 'SEARCHING FOR PLAYER...' });
+            matchmaking.push({ ws, id, data, mode });
+            send(ws, { type: 'matchmaking', message: mode === 'waves' ? 'SEARCHING FOR A WAVES TEAMMATE...' : 'SEARCHING FOR PLAYER...' });
             return;
         }
 
         const code = makeCode();
         const room = makeRoom(code,
             { ws, id, data },
-            { ws: other.ws, id: other.id, data: other.data }
+            { ws: other.ws, id: other.id, data: other.data },
+            mode
         );
         send(ws, { type: 'match_found', room: code, opponent: other.data });
         send(other.ws, { type: 'match_found', room: code, opponent: data });
         console.log(`Matchmaking created room ${code}.`);
-        startRoomBattle(room);
+        if (room.mode === 'waves') startCoopWaves(room);
+        else startRoomBattle(room);
         return;
     }
 
