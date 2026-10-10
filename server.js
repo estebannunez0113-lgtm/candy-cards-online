@@ -9,6 +9,149 @@ const path = require('path');
 const crypto = require('crypto');
 const WebSocket = require('ws');
 
+const Stripe = require('stripe');
+const { Pool } = require('pg');
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const APP_BASE_URL = (process.env.APP_BASE_URL || 'https://candy-cards-online.onrender.com').replace(/\/+$/, '');
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
+const pool = process.env.DATABASE_URL ? new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 5
+}) : null;
+
+const USD_GEM_PACKAGES = Object.freeze({
+    starter: { id: 'starter', name: 'Starter Gem Pack', gems: 500, amount: 99 },
+    popular: { id: 'popular', name: 'Popular Gem Pack', gems: 1800, amount: 299 },
+    mega: { id: 'mega', name: 'Mega Gem Pack', gems: 3500, amount: 499 },
+    ultra: { id: 'ultra', name: 'Ultra Gem Pack', gems: 8000, amount: 999 },
+    legendary: { id: 'legendary', name: 'Legendary Gem Pack', gems: 18000, amount: 1999 }
+});
+function paymentsConfigured(){return Boolean(stripe&&STRIPE_WEBHOOK_SECRET&&pool);}
+let paymentSchemaPromise=null;
+async function ensurePaymentSchema(){
+    if(!pool)throw new Error('Paid-gem database is not configured.');
+    if(!paymentSchemaPromise)paymentSchemaPromise=pool.query(`
+      CREATE TABLE IF NOT EXISTS candy_paid_gem_wallets(
+        player_id TEXT PRIMARY KEY, paid_gems BIGINT NOT NULL DEFAULT 0 CHECK(paid_gems>=0),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS candy_gem_purchase_orders(
+        session_id TEXT PRIMARY KEY, player_id TEXT NOT NULL, package_id TEXT NOT NULL,
+        gems INTEGER NOT NULL, amount_cents INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), paid_at TIMESTAMPTZ
+      );
+      CREATE INDEX IF NOT EXISTS candy_gem_orders_player_idx
+        ON candy_gem_purchase_orders(player_id,created_at DESC);
+    `);
+    await paymentSchemaPromise;
+}
+function sendJson(res,status,payload){
+    res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+    res.end(JSON.stringify(payload));
+}
+function readRequestBody(req,limit=16384){
+    return new Promise((resolve,reject)=>{
+        const chunks=[];let length=0;let tooLarge=false;
+        req.on('data',chunk=>{
+            if(tooLarge)return;
+            length+=chunk.length;
+            if(length>limit){tooLarge=true;reject(new Error('Request body is too large.'));return;}
+            chunks.push(chunk);
+        });
+        req.on('end',()=>{if(!tooLarge)resolve(Buffer.concat(chunks));});
+        req.on('error',reject);
+        req.on('aborted',()=>reject(new Error('Request was aborted.')));
+    });
+}
+function validPlayerId(v){return typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);}
+async function fulfillPaidGemSession(session){
+    if(!pool||!session||session.mode!=='payment'||session.payment_status!=='paid'||session.currency!=='usd')return;
+    const playerId=session.metadata&&session.metadata.player_id;
+    const packageId=session.metadata&&session.metadata.package_id;
+    const product=USD_GEM_PACKAGES[packageId];
+    if(!validPlayerId(playerId)||!product)throw new Error('Invalid paid-gem session metadata.');
+    if(Number(session.metadata.gems)!==product.gems||Number(session.amount_total)!==product.amount)
+        throw new Error('Paid-gem session values do not match the server catalog.');
+    await ensurePaymentSchema();
+    const client=await pool.connect();
+    try{
+        await client.query('BEGIN');
+        const result=await client.query('SELECT * FROM candy_gem_purchase_orders WHERE session_id=$1 FOR UPDATE',[session.id]);
+        const order=result.rows[0];
+        if(!order)throw new Error('Paid-gem order was not found; Stripe will retry the webhook.');
+        if(order.player_id!==playerId||order.package_id!==product.id||Number(order.gems)!==product.gems||Number(order.amount_cents)!==product.amount)
+            throw new Error('Order does not match the paid Stripe session.');
+        if(order.status!=='fulfilled'){
+            await client.query('INSERT INTO candy_paid_gem_wallets(player_id,paid_gems) VALUES($1,0) ON CONFLICT(player_id) DO NOTHING',[playerId]);
+            await client.query('UPDATE candy_paid_gem_wallets SET paid_gems=paid_gems+$2,updated_at=NOW() WHERE player_id=$1',[playerId,product.gems]);
+            await client.query("UPDATE candy_gem_purchase_orders SET status='fulfilled',paid_at=NOW() WHERE session_id=$1",[session.id]);
+        }
+        await client.query('COMMIT');
+    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+}
+async function handlePaymentApi(req,res,pathname){
+    if(pathname==='/api/purchase/config'&&req.method==='GET'){
+        sendJson(res,200,{enabled:paymentsConfigured(),currency:'USD',packages:Object.values(USD_GEM_PACKAGES).map(p=>({id:p.id,name:p.name,gems:p.gems,priceCents:p.amount}))});return;
+    }
+    if(pathname==='/api/stripe/webhook'&&req.method==='POST'){
+        if(!stripe||!STRIPE_WEBHOOK_SECRET||!pool){sendJson(res,503,{error:'Payment processing is not configured.'});return;}
+        const raw=await readRequestBody(req,1024*1024);
+        let event;
+        try{event=stripe.webhooks.constructEvent(raw,req.headers['stripe-signature'],STRIPE_WEBHOOK_SECRET);}
+        catch{sendJson(res,400,{error:'Invalid Stripe webhook signature.'});return;}
+        if(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded'){
+            const session=event.data.object;
+            if(session.payment_status==='paid')await fulfillPaidGemSession(session);
+        }
+        sendJson(res,200,{received:true});return;
+    }
+    if(!paymentsConfigured()){sendJson(res,503,{error:'USD checkout is not enabled yet. Payment provider and persistent database setup are required.'});return;}
+    await ensurePaymentSchema();
+    if(pathname==='/api/purchase/create'&&req.method==='POST'){
+        const raw=await readRequestBody(req);let body;
+        try{body=JSON.parse(raw.toString('utf8'));}catch{sendJson(res,400,{error:'Invalid JSON.'});return;}
+        const playerId=body&&body.playerId,product=USD_GEM_PACKAGES[body&&body.packageId];
+        if(!validPlayerId(playerId)||!product){sendJson(res,400,{error:'Invalid player ID or gem package.'});return;}
+        const session=await stripe.checkout.sessions.create({
+            mode:'payment',payment_method_types:['card'],
+            line_items:[{quantity:1,price_data:{currency:'usd',unit_amount:product.amount,product_data:{name:product.name,description:product.gems.toLocaleString('en-US')+' Candy Cards gems'}}}],
+            metadata:{player_id:playerId,package_id:product.id,gems:String(product.gems)},
+            success_url:APP_BASE_URL+'/?cashgems=success&session_id={CHECKOUT_SESSION_ID}',
+            cancel_url:APP_BASE_URL+'/?cashgems=cancelled'
+        });
+        await pool.query("INSERT INTO candy_gem_purchase_orders(session_id,player_id,package_id,gems,amount_cents,status) VALUES($1,$2,$3,$4,$5,'pending') ON CONFLICT(session_id) DO NOTHING",
+            [session.id,playerId,product.id,product.gems,product.amount]);
+        sendJson(res,200,{url:session.url});return;
+    }
+    if(pathname==='/api/paid-gems/wallet'&&req.method==='GET'){
+        const playerId=new URL(req.url,'http://localhost').searchParams.get('playerId')||'';
+        if(!validPlayerId(playerId)){sendJson(res,400,{error:'Invalid player ID.'});return;}
+        const r=await pool.query('SELECT paid_gems FROM candy_paid_gem_wallets WHERE player_id=$1',[playerId]);
+        sendJson(res,200,{paidGems:Number(r.rows[0]?.paid_gems||0)});return;
+    }
+    if(pathname==='/api/purchase/status'&&req.method==='GET'){
+        const u=new URL(req.url,'http://localhost'),playerId=u.searchParams.get('playerId')||'',sessionId=u.searchParams.get('sessionId')||'';
+        if(!validPlayerId(playerId)||!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)){sendJson(res,400,{error:'Invalid purchase lookup.'});return;}
+        const r=await pool.query('SELECT gems,status FROM candy_gem_purchase_orders WHERE session_id=$1 AND player_id=$2',[sessionId,playerId]);
+        if(!r.rows.length){sendJson(res,404,{status:'pending'});return;}
+        const w=await pool.query('SELECT paid_gems FROM candy_paid_gem_wallets WHERE player_id=$1',[playerId]);
+        sendJson(res,200,{status:r.rows[0].status,gems:Number(r.rows[0].gems),paidGems:Number(w.rows[0]?.paid_gems||0)});return;
+    }
+    if(pathname==='/api/paid-gems/spend'&&req.method==='POST'){
+        const raw=await readRequestBody(req);let body;
+        try{body=JSON.parse(raw.toString('utf8'));}catch{sendJson(res,400,{error:'Invalid JSON.'});return;}
+        const playerId=body&&body.playerId,amount=Number(body&&body.amount);
+        if(!validPlayerId(playerId)||!Number.isSafeInteger(amount)||amount<1||amount>100000){sendJson(res,400,{error:'Invalid wallet request.'});return;}
+        const r=await pool.query('UPDATE candy_paid_gem_wallets SET paid_gems=paid_gems-$2,updated_at=NOW() WHERE player_id=$1 AND paid_gems >= $2 RETURNING paid_gems',[playerId,amount]);
+        if(!r.rows.length){sendJson(res,409,{error:'Not enough paid gems.'});return;}
+        sendJson(res,200,{paidGems:Number(r.rows[0].paid_gems)});return;
+    }
+    sendJson(res,404,{error:'Not found.'});
+}
+
+
 const PORT = Number(process.env.PORT || 8080);
 const ROOT = __dirname;
 const MAX_PLAYERS_PER_ROOM = 2;
@@ -661,6 +804,14 @@ const server = http.createServer((req, res) => {
     } catch {
         res.writeHead(400);
         res.end('Bad request');
+        return;
+    }
+
+    if (pathname.startsWith('/api/')) {
+        handlePaymentApi(req,res,pathname).catch(error=>{
+            console.error('Payment API error:',error.message);
+            if(!res.headersSent)sendJson(res,500,{error:'Payment request failed. No card details are stored by Candy Cards.'});
+        });
         return;
     }
 
