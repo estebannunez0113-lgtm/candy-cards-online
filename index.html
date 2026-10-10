@@ -1560,13 +1560,17 @@ function applyGemKillEffect(x,y){
 function shopPage(tab){
     currentMode="gem-shop";
     currentGemShopTab=GEM_SHOP_TABS.some(t=>t.id===tab)?tab:(currentGemShopTab||"pets");
-    const tabs=GEM_SHOP_TABS.map(t=>'<button class="'+(currentGemShopTab===t.id?"gold":"purple")+' small" onclick="shopPage(\''+t.id+'\')">'+t.label+'</button>').join("");
+    const tabs=GEM_SHOP_TABS.map(t=>'<button class="'+(currentGemShopTab===t.id?"gold":"purple")+' small" onclick="shopPage(&quot;'+t.id+'&quot;)">'+t.label+'</button>').join("");
     let content="",heading="";
     if(currentGemShopTab==="classic"){
-        const cosmetics=GEM_COSMETICS.map(c=>{const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;return '<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid '+c.color+';border-radius:50%;box-shadow:0 0 18px '+c.color+'"></span></div><h2>'+esc(c.name)+'</h2><p>'+esc(c.desc)+'</p><p><b>💎 '+c.cost+'</b></p><button class="'+(eq?"gold":owned?"blue":"purple")+'" onclick="'+(owned?"equipGemCosmetic(\'"+c.id+"\')":"buyGemCosmetic(\'"+c.id+"\')")+'">'+(eq?"EQUIPPED":owned?"EQUIP":"BUY FOR 💎 "+c.cost)+'</button></div>';}).join("");
-        const bundles=GEM_BUNDLES.map(b=>'<div class="panel center"><h2>'+esc(b.name)+'</h2><p>'+esc(b.desc)+'</p><p><b>Cost: 💎 '+b.cost+'</b></p><button class="gold" onclick="buyGemBundle(\''+b.id+'\')">BUY BUNDLE</button></div>').join("");
+        const cosmetics=GEM_COSMETICS.map(c=>{
+            const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;
+            const action=owned?'equipGemCosmetic("'+c.id+'")':'buyGemCosmetic("'+c.id+'")';
+            return '<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid '+c.color+';border-radius:50%;box-shadow:0 0 18px '+c.color+'"></span></div><h2>'+esc(c.name)+'</h2><p>'+esc(c.desc)+'</p><p><b>GEMS: '+c.cost+'</b></p><button class="'+(eq?"gold":owned?"blue":"purple")+'" onclick="'+action+'">'+(eq?"EQUIPPED":owned?"EQUIP":"BUY FOR "+c.cost+" GEMS")+'</button></div>';
+        }).join("");
+        const bundles=GEM_BUNDLES.map(b=>'<div class="panel center"><h2>'+esc(b.name)+'</h2><p>'+esc(b.desc)+'</p><p><b>Cost: '+b.cost+' Gems</b></p><button class="gold" onclick="buyGemBundle(&quot;'+b.id+'&quot;)">BUY BUNDLE</button></div>').join("");
         heading="EXISTING BUNDLES & AURAS";
-        content='<h2>GEM BUNDLES</h2><div class="shop-bundle-grid">'+bundles+'</div><h2>GEM COSMETICS / AURAS</h2><div class="panel center"><p>These are separate from the new permanent shop items.</p><p>Equipped: <b>'+esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")+'</b></p><button class="gray" onclick="equipGemCosmetic(\'none\')">REMOVE AURA</button></div><div class="skin-grid">'+cosmetics+'</div>';
+        content='<h2>GEM BUNDLES</h2><div class="shop-bundle-grid">'+bundles+'</div><h2>GEM COSMETICS / AURAS</h2><div class="panel center"><p>These are separate from the new permanent shop items.</p><p>Equipped: <b>'+esc(GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic)?.name||"None")+'</b></p><button class="gray" onclick="equipGemCosmetic(&quot;none&quot;)">REMOVE AURA</button></div><div class="skin-grid">'+cosmetics+'</div>';
     }else if(currentGemShopTab==="daily"){
         heading="DAILY ROTATING STOCK";
         const offers=dailyGemProducts();
