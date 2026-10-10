@@ -1440,19 +1440,20 @@ function getCashPurchasePlayerId(){
         if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return id;
         id=window.crypto&&typeof window.crypto.randomUUID==="function"?window.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==="x"?r:(r&3|8)).toString(16);});
         localStorage.setItem(key,id);return id;
-    }catch{return "00000000-0000-4000-8000-000000000001";}
+    }catch{return "";}
 }
 const cashPurchasePlayerId=getCashPurchasePlayerId();
 async function refreshPaidGemWallet(){
     try{
         const c=await fetch("/api/purchase/config",{cache:"no-store"}).then(r=>r.json());
-        cashPurchasesEnabled=!!(c&&c.enabled);
+        cashPurchasesEnabled=!!(c&&c.enabled&&cashPurchasePlayerId);
         if(!cashPurchasesEnabled){paidGemWallet=0;return;}
         const r=await fetch("/api/paid-gems/wallet?playerId="+encodeURIComponent(cashPurchasePlayerId),{cache:"no-store"});
         const d=await r.json();if(r.ok)paidGemWallet=Math.max(0,Number(d.paidGems)||0);
     }catch{cashPurchasesEnabled=false;}
 }
 async function buyUsdGemPack(packageId){
+    if(!cashPurchasePlayerId){toast("BROWSER STORAGE MUST BE ENABLED TO SAVE A PURCHASE WALLET.");return;}
     if(!cashPurchasesEnabled){toast("USD CHECKOUT IS NOT SET UP YET. NO CHARGE WAS MADE.");return;}
     const p=CASH_GEM_PACKS.find(x=>x.id===packageId);if(!p)return toast("GEM PACK NOT FOUND.");
     try{
@@ -1634,7 +1635,7 @@ function shopPage(tab){
     let content="",heading="";
     if(currentGemShopTab==="money"){
         heading="BUY GEMS WITH USD";
-        const packs=CASH_GEM_PACKS.map(p=>'<div class="skin-box center" style="border-color:'+(p.featured?"#ffe45c":"#514260")+'"><h2>'+esc(p.name)+(p.featured?' ⭐':'')+'</h2><p style="font-size:27px;font-weight:900;color:#ffe45c">'+p.gems.toLocaleString()+' 💎</p><p style="font-size:24px;font-weight:900">'+p.price+' USD</p><p>One-time purchase. No subscription.</p><button class="gold" onclick="buyUsdGemPack(&quot;'+p.id+'&quot;)" '+(cashPurchasesEnabled?'':'disabled')+'>'+(cashPurchasesEnabled?'BUY WITH USD':'CHECKOUT NOT CONFIGURED')+'</button></div>').join("");
+        const packs=CASH_GEM_PACKS.map(p=>'<div class="skin-box center" style="border-color:'+(p.featured?"#ffe45c":"#514260")+'"><h2>'+esc(p.name)+(p.featured?' ⭐':'')+'</h2><p style="font-size:27px;font-weight:900;color:#ffe45c">'+p.gems.toLocaleString()+' 💎</p><p style="font-size:24px;font-weight:900">'+p.price+' USD</p><p>One-time purchase. No subscription.</p><button class="gold" onclick="buyUsdGemPack(&quot;'+p.id+'&quot;)" '+(cashPurchasesEnabled&&cashPurchasePlayerId?'':'disabled')+'>'+(cashPurchasesEnabled&&cashPurchasePlayerId?'BUY WITH USD':'CHECKOUT NOT CONFIGURED')+'</button></div>').join("");
         content='<div class="panel center"><h2>REAL MONEY GEM PACKS</h2><p>Payments use secure hosted Stripe Checkout. Candy Cards never stores your card number.</p><p><b>Paid gems are saved on the server for this browser profile.</b> Keep this browser data to retain access to the wallet.</p><p>Checkout: <b style="color:'+(cashPurchasesEnabled?'#38d76b':'#ff9a32')+'">'+(cashPurchasesEnabled?'READY':'NOT SET UP')+'</b></p></div><div class="shop-bundle-grid">'+packs+'</div>'+(cashPurchasesEnabled?'':'<div class="panel center"><b>Setup required before any real charge:</b><p>A parent/guardian must own and configure the payment account. Add STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, DATABASE_URL and APP_BASE_URL to Render environment settings. Never share secret keys in chat.</p></div>');
     }else if(currentGemShopTab==="classic"){
         const cosmetics=GEM_COSMETICS.map(c=>{
