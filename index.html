@@ -1504,8 +1504,8 @@ function buyGemProduct(id,daily){
     else if(item.type==="egg"){
         const rarityTable=[["OC",.1],["OP",.4],["Exotic",.9],["Secret",1.2],["Mythic",2.2],["Legendary",4],["Epic",7],["Rare",14],["Uncommon",25],["Common",45.2]];
         const roll=Math.random()*100;let total=0,rarity="Common";for(const pair of rarityTable){total+=pair[1];if(roll<total){rarity=pair[0];break;}}
-        let pool=PETS.filter(p=>!p.fusionOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega"&&p.rarity===rarity);
-        if(!pool.length)pool=PETS.filter(p=>!p.fusionOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega");
+        let pool=PETS.filter(p=>!p.fusionOnly&&!p.gemShopOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega"&&p.rarity===rarity);
+        if(!pool.length)pool=PETS.filter(p=>!p.fusionOnly&&!p.gemShopOnly&&p.name!=="Chipy"&&p.name!=="Echo Chipy"&&p.name!=="Chipy Super Mega");
         const winner=pool[Math.floor(Math.random()*pool.length)];save.pets_owned[winner.name]=Number(save.pets_owned[winner.name]||0)+1;save.last_egg_pet=winner.name;
     }else if(item.type==="perk"){if(!save.gem_perks.includes(item.reward))save.gem_perks.push(item.reward);}
     else if(item.type==="revive")save.revive_tokens++;
@@ -1565,7 +1565,7 @@ function shopPage(tab){
     if(currentGemShopTab==="classic"){
         const cosmetics=GEM_COSMETICS.map(c=>{
             const owned=save.owned_cosmetics.includes(c.id),eq=save.equipped_cosmetic===c.id;
-            const action=owned?'equipGemCosmetic("'+c.id+'")':'buyGemCosmetic("'+c.id+'")';
+            const action=owned?'equipGemCosmetic(&quot;'+c.id+'&quot;)':'buyGemCosmetic(&quot;'+c.id+'&quot;)';
             return '<div class="skin-box"><div style="height:52px;display:grid;place-items:center"><span style="display:block;width:36px;height:36px;border:5px solid '+c.color+';border-radius:50%;box-shadow:0 0 18px '+c.color+'"></span></div><h2>'+esc(c.name)+'</h2><p>'+esc(c.desc)+'</p><p><b>GEMS: '+c.cost+'</b></p><button class="'+(eq?"gold":owned?"blue":"purple")+'" onclick="'+action+'">'+(eq?"EQUIPPED":owned?"EQUIP":"BUY FOR "+c.cost+" GEMS")+'</button></div>';
         }).join("");
         const bundles=GEM_BUNDLES.map(b=>'<div class="panel center"><h2>'+esc(b.name)+'</h2><p>'+esc(b.desc)+'</p><p><b>Cost: '+b.cost+' Gems</b></p><button class="gold" onclick="buyGemBundle(&quot;'+b.id+'&quot;)">BUY BUNDLE</button></div>').join("");
@@ -2833,7 +2833,7 @@ function redeemSecretCode(){
         for(let i=0;i<packCount;i++){const c1=randomCard(),c2=randomCard(),p=rollPet();save.cards_owned[c1[0]]=(save.cards_owned[c1[0]]||0)+1;save.cards_owned[c2[0]]=(save.cards_owned[c2[0]]||0)+1;save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}
         result=(code==="cardparty"?"CARD PARTY!":"COLLECTOR CODE!")+" +"+(packCount*2)+" CARDS AND +"+packCount+" PETS.";
     }else if(code==="petparty"){
-        const pool=PETS.filter(p=>p.name!=="Chipy");
+        const pool=PETS.filter(p=>!p.fusionOnly&&!p.gemShopOnly&&p.name!=="Chipy");
         for(let i=0;i<12;i++){const p=pool[Math.floor(Math.random()*pool.length)];save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;}
         result="PET PARTY! +12 RANDOM PETS.";
     }else if(code==="candyboost"){
