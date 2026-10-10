@@ -1285,6 +1285,16 @@ function totalSpeed(){return save.player_speed+totalPet("speed");}
 function totalRange(){return save.player_attack_range+totalPet("range");}
 function totalCreditBonus(){return totalPet("credits");}
 function waveAttack(){
+    if(currentMode==="multiplayerWaves"&&onlineWaves&&waveState){
+        if(!waveState.running||waveState.player.cooldown>0)return;
+        sfxAttack();
+        waveState.player.cooldown=.35;
+        waveState.effects.push({x:waveState.player.x,y:waveState.player.y,r:totalRange(),life:.18});
+        if(!sendMulti({type:"wave_attack",room:onlineWaves.state.room})){
+            toast("CONNECTION LOST — RECONNECT TO PLAY!");
+        }
+        return;
+    }
     if(!waveState||!waveState.running)return;
     sfxAttack();
     const p=waveState.player;if(p.cooldown>0)return;p.cooldown=.35;waveState.effects.push({x:p.x,y:p.y,r:totalRange(),life:.18});
@@ -1392,11 +1402,46 @@ function drawWave(){
     ctx.fillStyle=C.DARK_BG;ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.strokeStyle="rgba(255,255,255,.035)";ctx.lineWidth=1;
     for(let y=100;y<HEIGHT;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WIDTH,y);ctx.stroke();}for(let x=0;x<WIDTH;x+=50){ctx.beginPath();ctx.moveTo(x,85);ctx.lineTo(x,HEIGHT);ctx.stroke();}
     for(const p of waveState.pickups){ctx.fillStyle=C.GOLD;ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.YELLOW;ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.WHITE;ctx.beginPath();ctx.arc(p.x-3,p.y-3,3,0,Math.PI*2);ctx.fill();}
-    for(const e of waveState.enemies)drawEnemy(ctx,e);drawPlayer(ctx,waveState.player.x,waveState.player.y);drawEquippedPet(ctx,waveState.player.x+78,waveState.player.y+10);
+    for(const e of waveState.enemies)drawEnemy(ctx,e);
+    drawPlayer(ctx,waveState.player.x,waveState.player.y);
+    drawEquippedPet(ctx,waveState.player.x+78,waveState.player.y+10);
+    if(currentMode==="multiplayerWaves"&&onlineWaves&&onlineWaves.state){
+        const teammate=onlineWaves.state.players.find(p=>p.id!==onlineWaves.you);
+        if(teammate&&teammate.hp>0)drawOnlineTeammate(ctx,teammate);
+    }
     for(const e of waveState.effects){ctx.strokeStyle=C.YELLOW;ctx.lineWidth=5;ctx.globalAlpha=Math.max(0,e.life/.18);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1+(.18-e.life)*1.2),0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;
     for(const p of waveState.particles){ctx.globalAlpha=Math.max(0,p.life/1.2);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,Math.max(1,p.size),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
     for(const t of waveState.texts){ctx.globalAlpha=Math.max(0,t.life/1.3);ctx.fillStyle=t.color;ctx.font="25px Arial";ctx.textAlign="center";ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;
 }
+function drawOnlineTeammate(ctx, player){
+    const oldSkin=save.equipped_skin, oldCosmetic=save.equipped_cosmetic, oldPet=save.equipped_pet;
+    try{
+        save.equipped_skin=player.skin||"Classic Lollipop";
+        save.equipped_cosmetic=player.cosmetic||"None";
+        save.equipped_pet=player.pet||null;
+        drawPlayer(ctx,player.x,player.y);
+        drawEquippedPet(ctx,player.x+78,player.y+10);
+    }finally{
+        save.equipped_skin=oldSkin;
+        save.equipped_cosmetic=oldCosmetic;
+        save.equipped_pet=oldPet;
+    }
+    const label=String(player.username||"TEAMMATE");
+    ctx.save();
+    ctx.textAlign="center";
+    ctx.font="bold 17px Arial";
+    ctx.lineWidth=4;
+    ctx.strokeStyle="#100b1d";
+    ctx.strokeText(label,player.x,player.y-66);
+    ctx.fillStyle="#ffffff";
+    ctx.fillText(label,player.x,player.y-66);
+    ctx.fillStyle="#501a2a";
+    ctx.fillRect(player.x-31,player.y-57,62,7);
+    ctx.fillStyle="#42ee83";
+    ctx.fillRect(player.x-31,player.y-57,62*Math.max(0,player.hp/player.maxHp),7);
+    ctx.restore();
+}
+
 function drawPlayer(ctx,x,y){
     const cosmetic=GEM_COSMETICS.find(c=>c.id===save.equipped_cosmetic);
     if(cosmetic){ctx.save();ctx.globalAlpha=.82;ctx.strokeStyle=cosmetic.color;ctx.lineWidth=6;ctx.shadowColor=cosmetic.color;ctx.shadowBlur=24;ctx.beginPath();ctx.arc(x,y,49,0,Math.PI*2);ctx.stroke();if(cosmetic.id==="chipy"){ctx.fillStyle=cosmetic.color;ctx.font="bold 18px Arial";ctx.textAlign="center";ctx.fillText("CHIPY",x,y-58);}ctx.restore();}
@@ -1787,7 +1832,7 @@ function drawDesignedBoss(ctx,e,d){
     ctx.restore();
 }
 function setupJoystick(){const b=document.getElementById("joy"),k=document.getElementById("joyKnob");if(!b||!k)return;function move(e){if(!joystick.active)return;const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,m=45,len=Math.hypot(dx,dy);if(len>m){dx=dx/len*m;dy=dy/len*m;}joystick.x=dx/m;joystick.y=dy/m;k.style.transform=`translate(${dx}px,${dy}px)`;}b.addEventListener("pointerdown",e=>{joystick.active=true;b.setPointerCapture?.(e.pointerId);move(e)});b.addEventListener("pointermove",move);for(const ev of["pointerup","pointercancel"]){b.addEventListener(ev,()=>{joystick.active=false;joystick.x=0;joystick.y=0;k.style.transform="";});}}
-function setKey(e,on){keys[e.key.toLowerCase()]=on;if(e.code==="Space"&&on){if(currentMode==="waves")waveAttack();}}
+function setKey(e,on){keys[e.key.toLowerCase()]=on;if(e.code==="Space"&&on){if(currentMode==="waves"||currentMode==="multiplayerWaves")waveAttack();}}
 window.addEventListener("keydown",e=>setKey(e,true));window.addEventListener("keyup",e=>setKey(e,false));
 window.addEventListener("resize",()=>{
     if(currentMode === "waves" && waveState){
@@ -1820,6 +1865,7 @@ function finishCardBattle(won){cardBattle.over=true;if(won){save.wins++;save.tro
 function multiplayerPage(mode='battle'){
     if(!navigator.onLine){alert("Oh dear, sweets! No Wi-Fi! Reconnect to the Wi-Fi to play online.");return;}
     multiMode=mode==='waves'?'waves':'battle';
+    if(multiMode==='waves')setResponsiveWaveDimensions();
     currentMode=multiMode==='waves'?'multiplayerWavesLobby':'multiplayer';
     const title=multiMode==='waves'?'WAVES MULTIPLAYER':'BATTLING MULTIPLAYER';
     const desc=multiMode==='waves'?'Two players team up against shared, server-synced enemy waves.':'Two players battle with their equipped cards.';
@@ -1832,7 +1878,13 @@ window.addEventListener("online",()=>{if(currentMode==="multiplayer")setNet("ONL
 function socketUrl(){const proto=location.protocol==="https:"?"wss":"ws";return `${proto}://${location.host}`;}
 function connectSocket(){if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;try{socket=new WebSocket(socketUrl());socket.onopen=()=>setNet("CONNECTED TO SERVER");socket.onclose=()=>setNet("SERVER DISCONNECTED");socket.onerror=()=>setNet("SERVER CONNECTION ERROR");socket.onmessage=e=>handleMultiMessage(e.data);}catch{setNet("WEBSOCKET NOT AVAILABLE");}}
 function sendMulti(obj){if(!socket||socket.readyState!==WebSocket.OPEN){setNet("NO SERVER CONNECTION");return false;}socket.send(JSON.stringify(obj));return true;}
-function multiPlayerData(){return{username:save.username,card:save.equipped_card,pet:save.equipped_pet,trophies:save.trophies};}
+function multiPlayerData(){return{
+    username:save.username,card:save.equipped_card,pet:save.equipped_pet,trophies:save.trophies,
+    player_max_health:save.player_max_health,player_health:save.player_health,
+    player_damage:totalDamage(),player_speed:totalSpeed(),player_attack_range:totalRange(),
+    equipped_skin:save.equipped_skin,equipped_cosmetic:save.equipped_cosmetic,
+    current_wave:save.current_wave,worldHeight:HEIGHT
+};}
 let multiMode='battle';
 function createMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";saveGame();connectSocket();setTimeout(()=>sendMulti({type:"create_room",mode:multiMode,username:save.username,player:multiPlayerData()}),250);}
 function joinMultiplayerRoom(){if(!requireMultiplayerInternet())return;save.username=document.getElementById("multiName")?.value.trim()||"CandyPlayer";const code=document.getElementById("roomInput")?.value.trim().toUpperCase();if(!code)return toast("ENTER A ROOM CODE!");saveGame();connectSocket();setTimeout(()=>sendMulti({type:"join_room",mode:multiMode,room:code,roomCode:code,username:save.username,player:multiPlayerData()}),250);}
@@ -1848,9 +1900,9 @@ function handleMultiMessage(raw){let m;try{m=JSON.parse(raw)}catch{setNet(raw);r
     if(m.type==="multiplayer_battle_state"){updateOnlineBattle(m);return;}
     if(m.type==="multiplayer_waves_start"){beginOnlineWaves(m);return;}
     if(m.type==="multiplayer_waves_state"){updateOnlineWaves(m);return;}
-    if(m.type==="multiplayer_waves_result"){alert(m.message||"TEAM DEFEATED!");onlineWaves=null;multiplayerPage('waves');return;}
+    if(m.type==="multiplayer_waves_result"){const waveMode=Boolean(onlineWaves);onlineWaves=null;waveState=null;joystick.active=false;joystick.x=0;joystick.y=0;alert(m.message||"TEAM DEFEATED!");multiplayerPage(waveMode?'waves':'battle');return;}
     if(m.type==="battle_result"){finishOnlineBattle(m);return;}
-    if(m.type==="opponent_left"){setNet("OPPONENT LEFT");alert(m.message||"Opponent disconnected.");multiplayerPage();return;}
+    if(m.type==="opponent_left"){const waveMode=Boolean(onlineWaves);onlineWaves=null;waveState=null;joystick.active=false;joystick.x=0;joystick.y=0;setNet("OPPONENT LEFT");alert(m.message||"Opponent disconnected.");multiplayerPage(waveMode?'waves':'battle');return;}
     if(m.type==="error")return setNet("SERVER ERROR: "+(m.message||"UNKNOWN"));
     setNet(m.message||m.type||"SERVER MESSAGE");}
 
@@ -1930,15 +1982,141 @@ function leaveOnlineBattle(){sendMulti({type:"leave_room"});onlineBattle=null;mu
 
 
 let onlineWaves=null;
-function beginOnlineWaves(m){onlineWaves={you:m.you,state:m.state,log:['TEAM UP! CO-OP WAVES STARTED!']};drawOnlineWaves();}
-function updateOnlineWaves(m){if(!onlineWaves)return;onlineWaves.state=m.state||onlineWaves.state;if(m.log)onlineWaves.log.push(m.log);drawOnlineWaves();}
-function drawOnlineWaves(){
- if(!onlineWaves)return;currentMode='multiplayerWaves';
- const s=onlineWaves.state,me=s.players.find(p=>p.id===onlineWaves.you),ally=s.players.find(p=>p.id!==onlineWaves.you),e=s.enemy;
- render(`${topbar()}<div class="section"><h1>WAVES MULTIPLAYER</h1><div class="panel center"><h2>WAVE ${s.wave} ${e.boss?'— BOSS':''}</h2><h2 style="color:#ffe45c">${esc(e.name)}</h2><div class="hpbox" style="width:min(620px,95%);height:25px"><div style="width:${Math.max(0,e.hp/e.maxHp*100)}%;background:#ff4757"></div></div><b>ENEMY HP: ${e.hp} / ${e.maxHp}</b></div><div class="multi-grid"><div class="panel center"><h2>YOU: ${esc(me.username)}</h2><p>Card: ${esc(me.card||'Red Lollipop')}</p><div class="hpbox"><div style="width:${Math.max(0,me.hp/me.maxHp*100)}%"></div></div><b>HP ${me.hp} / ${me.maxHp}</b></div><div class="panel center"><h2>TEAMMATE: ${esc(ally.username)}</h2><p>Card: ${esc(ally.card||'Red Lollipop')}</p><div class="hpbox"><div style="width:${Math.max(0,ally.hp/ally.maxHp*100)}%"></div></div><b>HP ${ally.hp} / ${ally.maxHp}</b></div></div><div class="battle-actions"><button class="red" onclick="sendOnlineWaveAction('strike')">ATTACK</button><button class="gold" onclick="sendOnlineWaveAction('power')">POWER ATTACK</button><button class="blue" onclick="sendOnlineWaveAction('pet')">PET SKILL</button><button class="green" onclick="sendOnlineWaveAction('heal')">TEAM HEAL</button><button class="gray" onclick="leaveOnlineWaves()">LEAVE</button></div><div class="log"><div>ROOM: ${esc(s.room)}</div>${onlineWaves.log.slice(-6).map(x=>`<div>${esc(x)}</div>`).join('')}</div></div>`);
+
+function beginOnlineWaves(message){
+    const state=message.state;
+    if(!state||!Array.isArray(state.players))return;
+    onlineWaves={
+        you:message.you,state,log:["TEAM UP! BOTH PLAYERS SHARE ONE WAVES ARENA."],
+        lastMoveSent:0,lastFrame:performance.now(),lastCandyEarned:0,lastWave:state.wave,
+        running:true
+    };
+    multiRoom=state.room||multiRoom;
+    WIDTH=state.width||1280;
+    HEIGHT=state.height||HEIGHT;
+    currentMode="multiplayerWaves";
+    waveState={
+        wave:state.wave,
+        player:{x:0,y:0,maxHealth:100,health:100,damage:20,speed:5,range:95,cooldown:0},
+        enemies:[],particles:[],texts:[],effects:[],pickups:[],
+        running:true,finished:false,infinite:false,kills:0
+    };
+    applyOnlineWaveState();
+    renderOnlineWavePage();
+    lastWaveTime=performance.now();
+    requestAnimationFrame(onlineWaveLoop);
 }
-function sendOnlineWaveAction(action){if(!onlineWaves||!socket)return;if(!sendMulti({type:'wave_action',room:onlineWaves.state.room,action}))toast('NOT CONNECTED!');}
-function leaveOnlineWaves(){sendMulti({type:'leave_room'});onlineWaves=null;multiplayerPage('waves');}
+
+function applyOnlineWaveState(){
+    if(!onlineWaves||!onlineWaves.state)return;
+    const state=onlineWaves.state;
+    const me=state.players.find(p=>p.id===onlineWaves.you);
+    if(!me)return;
+    if(!waveState){
+        waveState={wave:state.wave,player:{},enemies:[],particles:[],texts:[],effects:[],pickups:[],running:true,finished:false,infinite:false,kills:0};
+    }
+    waveState.wave=state.wave;
+    waveState.enemies=Array.isArray(state.enemies)?state.enemies.filter(e=>e.alive&&e.health>0):[];
+    waveState.player={
+        x:Number(me.x)||50,y:Number(me.y)||100,
+        health:Number(me.hp)||0,maxHealth:Number(me.maxHp)||100,
+        damage:Number(me.damage)||20,speed:Number(me.speed)||5,
+        range:Number(me.range)||95,cooldown:waveState.player.cooldown||0
+    };
+    waveState.running=me.hp>0;
+    waveState.finished=false;
+    const hpFill=document.getElementById("hpFill");
+    const hpText=document.getElementById("hpText");
+    const candyText=document.getElementById("candyText");
+    const waveText=document.getElementById("waveText");
+    const cardText=document.getElementById("cardText");
+    if(hpFill)hpFill.style.width=(Math.max(0,me.hp/me.maxHp)*100)+"%";
+    if(hpText)hpText.textContent="HP "+Math.round(me.hp)+"/"+me.maxHp;
+    if(candyText)candyText.textContent="Candy: "+save.candy_credits;
+    if(waveText)waveText.textContent="CO-OP WAVE "+state.wave+"/"+MAX_WAVES;
+    if(cardText)cardText.textContent="TEAM: "+state.players.filter(p=>p.hp>0).length+"/2";
+}
+
+function renderOnlineWavePage(){
+    currentMode="multiplayerWaves";
+    render(`<div class="wave-page"><canvas id="waveCanvas" class="game" width="${WIDTH}" height="${HEIGHT}"></canvas>
+    <div class="waveHUD"><div class="waveHP"><div id="hpFill"></div><span id="hpText">HP</span></div><div class="txt" id="candyText">Candy: ${save.candy_credits}</div><div class="txt" id="waveText">CO-OP WAVE ${onlineWaves.state.wave}/${MAX_WAVES}</div><div class="txt" id="cardText">TEAM: 2/2</div></div>
+    <div class="waveButtons"><button class="gray small" onclick="leaveOnlineWaves()">LEAVE TEAM</button></div>
+    <div class="touch-joystick" id="joy"><div class="touch-knob" id="joyKnob"></div></div>
+    <button class="attack-touch" id="attackTouch">ATTACK</button></div>`);
+    // Movement and attacking are separate controls on each player's own device.
+    document.getElementById("attackTouch").addEventListener("pointerdown",e=>{e.preventDefault();waveAttack();});
+    setupJoystick();
+    const joy=document.getElementById("joy");
+    if(joy)joy.style.touchAction="none";
+}
+
+function onlineWaveLoop(now){
+    if(!onlineWaves||!waveState||currentMode!=="multiplayerWaves")return;
+    const dt=Math.min(.05,Math.max(0,(now-(onlineWaves.lastFrame||now))/1000));
+    onlineWaves.lastFrame=now;
+    const p=waveState.player;
+    p.cooldown=Math.max(0,(p.cooldown||0)-dt);
+    let dx=joystick.x,dy=joystick.y;
+    if(keys.a||keys.arrowleft)dx-=1;
+    if(keys.d||keys.arrowright)dx+=1;
+    if(keys.w||keys.arrowup)dy-=1;
+    if(keys.s||keys.arrowdown)dy+=1;
+    const length=Math.hypot(dx,dy);
+    if(length>1){dx/=length;dy/=length;}
+    if(p.health>0){
+        p.x=Math.max(50,Math.min(WIDTH-50,p.x+dx*p.speed*60*dt));
+        p.y=Math.max(100,Math.min(HEIGHT-70,p.y+dy*p.speed*60*dt));
+    }
+    if(now-(onlineWaves.lastMoveSent||0)>=60){
+        sendMulti({type:"wave_move",room:onlineWaves.state.room,dx,dy});
+        onlineWaves.lastMoveSent=now;
+    }
+    for(const e of waveState.effects)e.life-=dt;
+    waveState.effects=waveState.effects.filter(e=>e.life>0);
+    for(const x of waveState.particles){x.life-=dt;x.x+=x.vx*60*dt;x.y+=x.vy*60*dt;x.vy+=3*dt;}
+    waveState.particles=waveState.particles.filter(x=>x.life>0);
+    for(const x of waveState.texts){x.life-=dt;x.y-=35*dt;}
+    waveState.texts=waveState.texts.filter(x=>x.life>0);
+    drawWave();
+    requestAnimationFrame(onlineWaveLoop);
+}
+
+function updateOnlineWaves(message){
+    if(!onlineWaves||!message.state)return;
+    const oldWave=Number(onlineWaves.state?.wave)||1;
+    const nextState=message.state;
+    if(message.log){
+        onlineWaves.log.push(message.log);
+        if(onlineWaves.log.length>12)onlineWaves.log.shift();
+    }
+    onlineWaves.state=nextState;
+    if(nextState.wave>oldWave){
+        const cleared=oldWave;
+        const firstClear=cleared>highestWaveCleared();
+        save.highest_wave_cleared=Math.max(highestWaveCleared(),cleared);
+        save.current_wave=Math.max(Number(save.current_wave)||1,nextState.wave);
+        if(firstClear)save.candy_gems=(Number(save.candy_gems)||0)+(cleared%5===0?10:3);
+        save.player_health=Number(nextState.players.find(p=>p.id===onlineWaves.you)?.hp)||save.player_health;
+        saveGame();
+        sfxWin();
+    }
+    const me=nextState.players.find(p=>p.id===onlineWaves.you);
+    if(me){
+        const earned=Math.max(0,Number(me.candyEarned)||0);
+        const delta=Math.max(0,earned-(onlineWaves.lastCandyEarned||0));
+        if(delta>0){save.candy_credits+=delta;onlineWaves.lastCandyEarned=earned;saveGame();}
+    }
+    applyOnlineWaveState();
+}
+
+function leaveOnlineWaves(){
+    sendMulti({type:"leave_room"});
+    onlineWaves=null;
+    waveState=null;
+    joystick.active=false;joystick.x=0;joystick.y=0;
+    multiplayerPage("waves");
+}
 
 // ================================================================
 // RANK — SEPARATE FROM MULTIPLAYER UI
