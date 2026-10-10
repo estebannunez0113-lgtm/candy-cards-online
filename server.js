@@ -44,11 +44,22 @@ function clampNumber(value, fallback, min, max) {
 
 function safePlayer(raw) {
     const player = raw && typeof raw === 'object' ? raw : {};
+    const cleanString = (value, fallback, max = 80) =>
+        typeof value === 'string' ? value.slice(0, max) : fallback;
     return {
         username: cleanName(player.username),
-        card: typeof player.card === 'string' ? player.card.slice(0, 80) : 'Red Lollipop',
-        pet: typeof player.pet === 'string' ? player.pet.slice(0, 80) : null,
-        trophies: clampNumber(player.trophies, 0, 0, 999999)
+        card: cleanString(player.card, 'Red Lollipop'),
+        pet: cleanString(player.pet, null),
+        trophies: clampNumber(player.trophies, 0, 0, 999999),
+        playerMaxHealth: clampNumber(player.player_max_health, 100, 1, 5000),
+        playerHealth: clampNumber(player.player_health, 100, 0, 5000),
+        playerDamage: clampNumber(player.player_damage, 20, 1, 100000),
+        playerSpeed: clampNumber(player.player_speed, 5, 0.1, 100),
+        playerRange: clampNumber(player.player_attack_range, 95, 20, 600),
+        skin: cleanString(player.equipped_skin, 'Classic Lollipop'),
+        cosmetic: cleanString(player.equipped_cosmetic, 'None'),
+        worldHeight: clampNumber(player.worldHeight, 720, 360, 1800),
+        currentWave: clampNumber(player.current_wave, 1, 1, 300)
     };
 }
 
@@ -74,11 +85,11 @@ function makeRoom(code, first, second = null, mode = 'battle') {
     const room = {
         code, mode: mode === 'waves' ? 'waves' : 'battle',
         players: [], started: false, turn: 0, round: 0,
-        wave: 1, enemy: null
+        wave: 1, enemy: null, enemies: [], height: 720,
+        lastTickAt: Date.now(), pendingLog: ''
     };
 
     for (const item of [first, second].filter(Boolean)) {
-        // Prevent the same socket or player ID from being counted twice.
         if (room.players.some(p => p.ws === item.ws || p.id === item.id)) continue;
         room.players.push({
             id: item.id,
@@ -89,6 +100,9 @@ function makeRoom(code, first, second = null, mode = 'battle') {
         });
     }
 
+    if (room.players[0]?.data?.worldHeight) {
+        room.height = room.players[0].data.worldHeight;
+    }
     rooms.set(code, room);
     return room;
 }
@@ -183,49 +197,257 @@ function cardDamage(action) {
     return 20;
 }
 
-function waveEnemy(wave) {
-    const bosses={5:'Broccoli King',10:'Steak Titan',15:'Candy Crusher',20:'Toxic Broccoli',25:'Golden Steak',30:'Fire Candy',35:'Galaxy Beast',40:'Shadow Food',45:'Diamond Destroyer',50:'The Candy Apocalypse'};
-    const normal=['Broccoli','Carrot Goblin','Angry Tomato','Cheese Beast','Cookie Monster'];
-    const boss=Boolean(bosses[wave]), hp=(boss?180:65)+wave*(boss?28:18);
-    return {name:bosses[wave]||normal[(wave-1)%normal.length],boss,hp,maxHp:hp};
-}
-function waveSnapshot(room){return {room:room.code,wave:room.wave,enemy:room.enemy,players:room.players.map(p=>({id:p.id,username:p.data.username,card:p.data.card,pet:p.data.pet,hp:p.hp,maxHp:p.maxHp}))};}
-function broadcastWave(room,log=''){const state=waveSnapshot(room);for(const p of room.players)send(p.ws,{type:'multiplayer_waves_state',you:p.id,state,log});}
-function startCoopWaves(room){
-    if(!room||room.started||room.mode!=='waves'||room.players.length!==2)return;
-    if(new Set(room.players.map(p=>p.ws)).size!==2||new Set(room.players.map(p=>p.id)).size!==2)return;
-    room.started=true;room.wave=1;room.enemy=waveEnemy(1);
-    for(const p of room.players){p.hp=100;p.maxHp=100;}
-    const state=waveSnapshot(room);
-    for(const p of room.players)send(p.ws,{type:'multiplayer_waves_start',you:p.id,state});
-    console.log(`Co-op waves started in room ${room.code}: ${room.players.map(p=>p.data.username).join(' + ')}`);
-}
-function handleWaveAction(ws,msg){
-    const room=findRoomFor(ws);
-    if(!room||!room.started||room.mode!=='waves'||room.players.length!==2){send(ws,{type:'error',message:'No active co-op waves game.'});return;}
-    const me=room.players.find(p=>p.ws===ws);
-    if(!me){send(ws,{type:'error',message:'You are not in this room.'});return;}
-    if(me.hp<=0){send(ws,{type:'error',message:'You are knocked out. Your teammate must keep fighting.'});return;}
-    const action=['strike','power','pet','heal'].includes(msg.action)?msg.action:'strike';
-    const damage=action==='power'?36:action==='pet'?27:20;let log='';
-    if(action==='heal'){
-        const ally=room.players.find(p=>p.id!==me.id);
-        me.hp=Math.min(me.maxHp,me.hp+18);if(ally)ally.hp=Math.min(ally.maxHp,ally.hp+10);
-        log=`${me.data.username} used a team heal!`;
-    }else{
-        room.enemy.hp=Math.max(0,room.enemy.hp-damage);
-        log=`${me.data.username} hit ${room.enemy.name} for ${damage} damage.`;
-        if(room.enemy.hp<=0){const cleared=room.wave++;room.enemy=waveEnemy(room.wave);for(const p of room.players)p.hp=Math.min(p.maxHp,p.hp+12);log+=` Wave ${cleared} cleared! Wave ${room.wave} begins!`;}
-        const enemyDamage=Math.min(18,4+Math.floor(room.wave/3)+(room.enemy.boss?3:0));
-        for(const p of room.players)if(p.hp>0)p.hp=Math.max(0,p.hp-enemyDamage);
-    }
-    broadcastWave(room,log);
-    if(room.players.every(p=>p.hp<=0)){
-        for(const p of room.players)send(p.ws,{type:'multiplayer_waves_result',wave:room.wave,message:`TEAM DEFEATED! YOU REACHED WAVE ${room.wave}.`});
-        for(const p of room.players)players.delete(p.ws);rooms.delete(room.code);
-    }
+const WAVE_WIDTH = 1280;
+const MAX_COOP_WAVES = 300;
+const KNOWN_BOSSES = {
+    5: 'BROCCOLI KING', 10: 'STEAK TITAN', 15: 'CANDY CRUSHER',
+    20: 'TOXIC BROCCOLI', 25: 'GOLDEN STEAK', 30: 'FIRE CANDY',
+    35: 'GALAXY BEAST', 40: 'SHADOW FOOD', 45: 'DIAMOND DESTROYER',
+    50: 'THE CANDY APOCALYPSE'
+};
+const BOSS_ADJECTIVES_SERVER = ['CRYSTAL','STORM','INFERNAL','VOID','PRISMATIC','TOXIC','NEON','COSMIC','FROST','SHADOW','RADIANT','GLITCHED','THUNDER','NOVA','ETERNAL','CHAOS','DIAMOND','PHANTOM','ASTRAL','OMEGA'];
+const BOSS_CREATURES_SERVER = ['BROCCOLI EMPEROR','STEAK COLOSSUS','CANDY HYDRA','SUGAR BEAST','LOLLIPOP DESTROYER','COOKIE TITAN','GUMDROP MONARCH','CHOCOLATE DRAGON','JELLY OVERLORD','CARAMEL DEVOURER','MARSHMALLOW GIANT','CANDY PHOENIX','FROST WOLF','RAINBOW GOLEM','COSMIC BEHEMOTH'];
+
+function waveBossName(wave) {
+    if (KNOWN_BOSSES[wave]) return KNOWN_BOSSES[wave];
+    if (wave === MAX_COOP_WAVES) return 'THE ULTIMATE CANDY GOD';
+    const i = Math.max(0, Math.floor(wave / 5) - 11);
+    const adjective = BOSS_ADJECTIVES_SERVER[i % BOSS_ADJECTIVES_SERVER.length];
+    const creature = BOSS_CREATURES_SERVER[Math.floor(i / BOSS_ADJECTIVES_SERVER.length) % BOSS_CREATURES_SERVER.length];
+    const tier = Math.floor((wave - 1) / 50) + 1;
+    return `${adjective} ${creature} — TIER ${tier}`;
 }
 
+function spawnCoopEnemy(room, type, boss = false) {
+    const width = WAVE_WIDTH;
+    const height = room.height || 720;
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    if (side === 0) { x = 50 + Math.random() * (width - 100); y = 100; }
+    else if (side === 1) { x = width - 50; y = 100 + Math.random() * (height - 150); }
+    else if (side === 2) { x = 50 + Math.random() * (width - 100); y = height - 50; }
+    else { x = 50; y = 100 + Math.random() * (height - 150); }
+
+    const w = room.wave;
+    const e = { type, x, y, boss, alive: true, attackTimer: boss ? 0.7 : 0.2 + Math.random() * 0.8 };
+    if (type === 'final_boss') {
+        e.radius = 82;
+        e.maxHealth = 3000 + w * 100;
+        e.health = e.maxHealth;
+        e.speed = 0.65 + Math.min(0.45, w / 1000);
+        e.damage = 85 + Math.floor(w / 10);
+    } else if (type === 'broccoli') {
+        e.radius = 28;
+        e.maxHealth = 35 + w * 5;
+        e.health = e.maxHealth;
+        e.speed = 1.2 + w * 0.025;
+        e.damage = 7 + Math.floor(w / 4);
+    } else {
+        e.radius = 30;
+        e.maxHealth = 50 + w * 7;
+        e.health = e.maxHealth;
+        e.speed = 0.9 + w * 0.02;
+        e.damage = 10 + Math.floor(w / 3);
+    }
+    if (boss && type !== 'final_boss') {
+        const tier = Math.max(1, Math.floor((w - 1) / 50) + 1);
+        e.maxHealth *= 5 + Math.min(10, tier - 1);
+        e.health = e.maxHealth;
+        e.radius *= 1.55 + Math.min(0.35, tier * 0.025);
+        e.speed *= Math.max(0.60, 0.75 - tier * 0.01);
+        e.damage *= 2 + Math.min(3, Math.floor((tier - 1) / 2));
+    }
+    e.name = boss ? waveBossName(w) : (type === 'broccoli' ? 'BROCCOLI' : 'STEAK MONSTER');
+    e.color = boss ? '#ffcc49' : (type === 'broccoli' ? '#32b34a' : '#b96432');
+    return e;
+}
+
+function spawnCoopWave(room) {
+    room.enemies = [];
+    const w = room.wave;
+    const count = Math.min(50, 5 + w * 2);
+    if (w === MAX_COOP_WAVES) {
+        room.enemies.push(spawnCoopEnemy(room, 'final_boss', true));
+        for (let i = 0; i < 12; i++) room.enemies.push(spawnCoopEnemy(room, Math.random() < 0.5 ? 'broccoli' : 'steak'));
+        return;
+    }
+    if (w % 5 === 0) {
+        room.enemies.push(spawnCoopEnemy(room, Math.random() < 0.5 ? 'broccoli' : 'steak', true));
+        for (let i = 0; i < Math.max(1, count - 1); i++) {
+            room.enemies.push(spawnCoopEnemy(room, Math.random() < 0.5 ? 'broccoli' : 'steak'));
+        }
+    } else {
+        for (let i = 0; i < count; i++) {
+            room.enemies.push(spawnCoopEnemy(room, Math.random() < 0.5 ? 'broccoli' : 'steak'));
+        }
+    }
+    room.enemy = room.enemies.find(e => e.boss) || room.enemies[0] || null;
+}
+
+function waveSnapshot(room) {
+    return {
+        room: room.code, wave: room.wave, width: WAVE_WIDTH, height: room.height,
+        enemy: room.enemies.find(e => e.boss) || room.enemies[0] || null,
+        enemies: room.enemies,
+        players: room.players.map(p => ({
+            id: p.id, username: p.data.username, card: p.data.card, pet: p.data.pet,
+            trophies: p.data.trophies, hp: p.hp, maxHp: p.maxHp,
+            x: p.x, y: p.y, damage: p.damage, speed: p.speed, range: p.range,
+            skin: p.data.skin, cosmetic: p.data.cosmetic,
+            candyEarned: p.candyEarned || 0
+        }))
+    };
+}
+
+function broadcastWave(room, log = '') {
+    const state = waveSnapshot(room);
+    for (const p of room.players) send(p.ws, { type: 'multiplayer_waves_state', you: p.id, state, log });
+}
+
+function startCoopWaves(room) {
+    if (!room || room.started || room.mode !== 'waves' || room.players.length !== 2) return;
+    if (new Set(room.players.map(p => p.ws)).size !== 2 || new Set(room.players.map(p => p.id)).size !== 2) return;
+
+    room.started = true;
+    room.height = clampNumber(room.players[0]?.data?.worldHeight, 720, 360, 1800);
+    room.wave = clampNumber(room.players[0]?.data?.currentWave, 1, 1, MAX_COOP_WAVES);
+    room.pendingLog = `CO-OP WAVE ${room.wave} STARTED!`;
+    for (let i = 0; i < room.players.length; i++) {
+        const p = room.players[i];
+        const d = p.data;
+        p.maxHp = clampNumber(d.playerMaxHealth, 100, 1, 5000);
+        p.hp = d.playerHealth > 0 ? Math.min(p.maxHp, d.playerHealth) : p.maxHp;
+        p.x = WAVE_WIDTH / 2 + (i === 0 ? -100 : 100);
+        p.y = room.height / 2;
+        p.inputX = 0; p.inputY = 0;
+        p.damage = clampNumber(d.playerDamage, 20, 1, 100000);
+        p.speed = clampNumber(d.playerSpeed, 5, 0.1, 100);
+        p.range = clampNumber(d.playerRange, 95, 20, 600);
+        p.attackReadyAt = 0;
+        p.candyEarned = 0;
+    }
+    spawnCoopWave(room);
+    room.lastTickAt = Date.now();
+    broadcastWave(room, room.pendingLog);
+    room.pendingLog = '';
+    console.log(`Co-op waves started in room ${room.code}: ${room.players.map(p => p.data.username).join(' + ')}`);
+}
+
+function handleWaveAction(ws, msg) {
+    const room = findRoomFor(ws);
+    if (!room || !room.started || room.mode !== 'waves' || room.players.length !== 2) {
+        send(ws, { type: 'error', message: 'No active co-op waves game.' });
+        return;
+    }
+    const me = room.players.find(p => p.ws === ws);
+    if (!me) { send(ws, { type: 'error', message: 'You are not in this room.' }); return; }
+
+    if (msg.type === 'wave_move') {
+        if (me.hp <= 0) { me.inputX = 0; me.inputY = 0; return; }
+        let dx = clampNumber(msg.dx, 0, -1, 1);
+        let dy = clampNumber(msg.dy, 0, -1, 1);
+        const length = Math.hypot(dx, dy);
+        if (length > 1) { dx /= length; dy /= length; }
+        me.inputX = dx;
+        me.inputY = dy;
+        return;
+    }
+
+    if (me.hp <= 0) { send(ws, { type: 'error', message: 'You are knocked out. Your teammate must keep fighting.' }); return; }
+    const now = Date.now();
+    if (now < (me.attackReadyAt || 0)) return;
+    me.attackReadyAt = now + 350;
+
+    let hits = 0;
+    const range = me.range || 95;
+    const damage = me.damage || 20;
+    for (const e of room.enemies) {
+        if (!e.alive || e.health <= 0) continue;
+        if (Math.hypot(e.x - me.x, e.y - me.y) > range + e.radius) continue;
+        e.health = Math.max(0, e.health - damage);
+        hits++;
+        if (e.health <= 0) {
+            e.alive = false;
+            me.candyEarned = (me.candyEarned || 0) + (e.boss ? (8 + Math.floor(room.wave / 2)) : 1);
+        }
+    }
+    const remaining = room.enemies.filter(e => e.alive && e.health > 0).length;
+    broadcastWave(room, hits ? `${me.data.username} attacked! ${remaining} enemies remain.` : `${me.data.username} swung but missed.`);
+}
+
+function tickCoopWaves() {
+    const now = Date.now();
+    for (const room of rooms.values()) {
+        if (!room.started || room.mode !== 'waves' || room.players.length !== 2) continue;
+        const dt = Math.max(0, Math.min(0.12, (now - (room.lastTickAt || now)) / 1000));
+        room.lastTickAt = now;
+        const livePlayers = room.players.filter(p => p.hp > 0);
+
+        for (const p of room.players) {
+            if (p.hp <= 0) { p.inputX = 0; p.inputY = 0; continue; }
+            const dx = p.inputX || 0, dy = p.inputY || 0;
+            const len = Math.hypot(dx, dy);
+            const nx = len > 1 ? dx / len : dx;
+            const ny = len > 1 ? dy / len : dy;
+            p.x = Math.max(50, Math.min(WAVE_WIDTH - 50, p.x + nx * p.speed * 60 * dt));
+            p.y = Math.max(100, Math.min(room.height - 70, p.y + ny * p.speed * 60 * dt));
+        }
+
+        for (const e of room.enemies) {
+            if (!e.alive || e.health <= 0 || livePlayers.length === 0) continue;
+            let target = null, best = Infinity;
+            for (const p of livePlayers) {
+                const d = Math.hypot(p.x - e.x, p.y - e.y);
+                if (d < best) { best = d; target = p; }
+            }
+            if (!target) continue;
+            if (best > e.radius + 45 && best > 1) {
+                e.x += ((target.x - e.x) / best) * e.speed * 60 * dt;
+                e.y += ((target.y - e.y) / best) * e.speed * 60 * dt;
+            }
+            e.attackTimer -= dt;
+            if (best < e.radius + 45 && e.attackTimer <= 0) {
+                target.hp = Math.max(0, target.hp - e.damage);
+                e.attackTimer = e.type === 'final_boss' ? 0.75 : 1.0;
+            }
+        }
+
+        room.enemies = room.enemies.filter(e => e.alive && e.health > 0);
+        if (room.enemies.length === 0) {
+            if (room.wave >= MAX_COOP_WAVES) {
+                const state = waveSnapshot(room);
+                for (const p of room.players) {
+                    send(p.ws, { type: 'multiplayer_waves_state', you: p.id, state, log: 'FINAL BOSS DEFEATED!' });
+                    send(p.ws, { type: 'multiplayer_waves_result', wave: room.wave, won: true, message: 'TEAM VICTORY! YOU CLEARED ALL 300 WAVES!' });
+                    players.delete(p.ws);
+                }
+                rooms.delete(room.code);
+                continue;
+            }
+            const cleared = room.wave;
+            room.wave++;
+            for (const p of room.players) if (p.hp > 0) p.hp = Math.min(p.maxHp, p.hp + Math.floor(p.maxHp * 0.2));
+            spawnCoopWave(room);
+            room.pendingLog = `WAVE ${cleared} CLEARED! WAVE ${room.wave} STARTED!`;
+        }
+
+        if (room.players.every(p => p.hp <= 0)) {
+            for (const p of room.players) {
+                send(p.ws, { type: 'multiplayer_waves_result', wave: room.wave, won: false, message: `TEAM DEFEATED! YOU REACHED WAVE ${room.wave}.` });
+                players.delete(p.ws);
+            }
+            rooms.delete(room.code);
+            continue;
+        }
+
+        if (room.pendingLog) {
+            broadcastWave(room, room.pendingLog);
+            room.pendingLog = '';
+        } else {
+            broadcastWave(room);
+        }
+    }
+}
 
 function handleBattleAction(ws, msg) {
     const room = findRoomFor(ws);
@@ -291,7 +513,7 @@ function handleMessage(ws, raw) {
 
     const type = msg.type;
 
-    if (type === 'wave_action') { handleWaveAction(ws, msg); return; }
+    if (type === 'wave_action' || type === 'wave_move' || type === 'wave_attack') { handleWaveAction(ws, msg); return; }
 
     if (type === 'create_room') {
         const existingRoom = findRoomFor(ws);
@@ -483,6 +705,7 @@ const server = http.createServer((req, res) => {
 });
 
 const wss = new WebSocket.Server({ server, maxPayload: 64 * 1024 });
+const waveTicker = setInterval(tickCoopWaves, 80);
 const heartbeat = setInterval(() => {
     for (const ws of wss.clients) {
         if (ws.isAlive === false) {
@@ -494,7 +717,7 @@ const heartbeat = setInterval(() => {
     }
 }, 30000);
 
-wss.on('close', () => clearInterval(heartbeat));
+wss.on('close', () => { clearInterval(heartbeat); clearInterval(waveTicker); });
 wss.on('connection', ws => {
     ws.isAlive = true;
     getPlayerId(ws);
