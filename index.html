@@ -1775,7 +1775,7 @@ function waveAttack(){
     const p=waveState.player;if(p.cooldown>0)return;p.cooldown=.35;waveState.effects.push({x:p.x,y:p.y,r:totalRange(),life:.18});
     for(const e of waveState.enemies){if(!e.alive)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<=totalRange()+e.radius){e.health-=totalDamage();sfxHit();hitParticles(e.x,e.y);textEffect(e.x,e.y-35,"-"+Math.round(totalDamage()),C.YELLOW);if(e.health<=0)killEnemy(e);}}
 }
-function killEnemy(e){if(!e.alive)return;sfxHit();e.alive=false;if(waveState.infinite){waveState.kills=(waveState.kills||0)+1;if(waveState.kills%10===0){waveState.wave=Math.min(300,waveState.wave+1);toast("INFINITE LEVEL "+waveState.wave+"!");}}const w=waveState.wave;const reward=(e.boss?(8+Math.floor(w/2)):1)+totalCreditBonus();save.candy_credits+=reward;explosion(e.x,e.y);textEffect(e.x,e.y-40,"+"+reward+" Candy",C.YELLOW);if(e.boss){sfxWin();toast("DEFEATED: "+e.name+"!");}if(Math.random()<.35)waveState.pickups.push({x:e.x,y:e.y,value:1+Math.floor(Math.random()*4),life:10,bob:Math.random()*10});if(Math.random()<.035){const c=randomCard();save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;toast("CARD DROP: "+c[0]+" ["+c[1]+"]");}if(Math.random()<.01){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;toast("PET DROP: "+p.name+" ["+p.rarity+"]");}saveGame();}
+function killEnemy(e){if(!e.alive)return;sfxHit();e.alive=false;if(waveState.infinite){waveState.kills=(waveState.kills||0)+1;if(waveState.kills%10===0){waveState.wave=Math.min(300,waveState.wave+1);toast("INFINITE LEVEL "+waveState.wave+"!");}}const w=waveState.wave;const baseReward=(e.boss?(8+Math.floor(w/2)):1)+totalCreditBonus();const reward=Math.floor(baseReward*(save.gem_perks.includes("double_candy")?2:1));save.candy_credits+=reward;explosion(e.x,e.y);applyGemKillEffect(e.x,e.y);textEffect(e.x,e.y-40,"+"+reward+" Candy",C.YELLOW);if(e.boss){sfxWin();toast("DEFEATED: "+e.name+"!");}if(Math.random()<.35)waveState.pickups.push({x:e.x,y:e.y,value:1+Math.floor(Math.random()*4),life:10,bob:Math.random()*10});if(Math.random()<.035){const c=randomCard();save.cards_owned[c[0]]=(save.cards_owned[c[0]]||0)+1;toast("CARD DROP: "+c[0]+" ["+c[1]+"]");}if(Math.random()<.01){const p=rollPet();save.pets_owned[p.name]=(save.pets_owned[p.name]||0)+1;toast("PET DROP: "+p.name+" ["+p.rarity+"]");}saveGame();}
 function hitParticles(x,y){for(let i=0;i<8;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:.6,size:3+Math.random()*5,color:[C.RED,C.YELLOW,C.ORANGE,C.WHITE][Math.floor(Math.random()*4)]});}
 function explosion(x,y){for(let i=0;i<24;i++)waveState.particles.push({x,y,vx:(Math.random()-.5)*8,vy:(Math.random()-.5)*8,life:.5+Math.random()*.7,size:3+Math.random()*5,color:[C.RED,C.ORANGE,C.YELLOW,C.GREEN,C.WHITE,C.CYAN][Math.floor(Math.random()*6)]});}
 function textEffect(x,y,text,color){waveState.texts.push({x,y,text,color,life:1.3});}
@@ -1787,15 +1787,22 @@ function damagePlayer(amount){
     textEffect(p.x,p.y-45,"-"+Math.round(amount),C.RED);
 
     if(p.health<=0){
+        if(save.revive_tokens>0){
+            save.revive_tokens--;
+            p.health=Math.max(1,Math.round((p.maxHealth||save.player_max_health)*.5));
+            save.player_health=p.health;
+            waveState.running=true;
+            saveGame();
+            sfxWin();
+            textEffect(p.x,p.y-60,"REVIVED!",C.GREEN);
+            toast("REVIVE TOKEN USED! "+save.revive_tokens+" LEFT.");
+            return;
+        }
         p.health=0;
         waveState.running=false;
         save.player_health=0;
         saveGame();
-
-        setTimeout(()=>{
-            alert("GAME OVER — WAVE "+waveState.wave);
-            menu();
-        },30);
+        setTimeout(()=>{alert("GAME OVER — WAVE "+waveState.wave);menu();},30);
     }
 }
 function completeWave(){
@@ -1804,8 +1811,10 @@ function completeWave(){
     waveState.finished=true;
     const w=waveState.wave;
     const firstClear=w>highestWaveCleared();
-    const gemReward=firstClear?(w%5===0?10:3):0;
+    const baseGemReward=firstClear?(w%5===0?10:3):0;
+    const gemReward=baseGemReward*(save.gem_perks.includes("double_wave_rewards")?2:1);
     if(gemReward>0)save.candy_gems=(Number(save.candy_gems)||0)+gemReward;
+    showGemVictoryAnimation();
     sfxWin();
     waveState.running=false;
 
@@ -2801,7 +2810,7 @@ function redeemSecretCode(){
         result="RICH CODE REDEEMED! +2,000 CANDY CREDITS AND +500 CANDY GEMS.";
     }else if(code==="admin"){
         // Unlock all collection content and all replayable waves/skins.
-        for(const c of CANDY_CARDS)if(!FUSION_RECIPES.some(r=>r.type==="card"&&r.result===c[0]))save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
+        for(const c of CANDY_CARDS)if(!FUSION_RECIPES.some(r=>r.type==="card"&&r.result===c[0])&&!["Plasma Lollipop","Void Steak","Candy God Card"].includes(c[0]))save.cards_owned[c[0]]=Math.max(1,Number(save.cards_owned[c[0]]||0));
         for(const p of PETS){if(!p.gemShopOnly&&!p.fusionOnly)save.pets_owned[p.name]=Math.max(1,Number(save.pets_owned[p.name]||0));}
         save.highest_wave_cleared=MAX_WAVES;
         save.candy_credits+=10000;
